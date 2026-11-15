@@ -6,6 +6,7 @@ All notable changes are listed here, newest first. The project follows [Semantic
 
 ### Added
 
+- The README now speaks 51 languages besides English: all of Eurasia, from Portugal to Japan, plus the wider world. Every translation keeps the code blocks byte-identical, carries a language switcher at the top, and no emoji anywhere.
 - Update check: when an interactive session starts, Marelle asks GitHub and GitLab for a newer version and mentions it once in the conversation, with the release page. Releases are asked for first, then tags; every failure stays silent. Sources and the timeout are settings: `update.check`, `update.github_repo`, `update.gitlab_repo`, `update.timeout_secs`.
 - Tool permission answers speak the interface language, and the confirmation offers "Allow always": the category is granted for the rest of the session, without ever lifting a `deny` policy. In the full-screen interface every tool call and its result join the transcript; the line session keeps them on stderr, and the terminal prompt answers `y` once, `a` always.
 
