@@ -178,7 +178,7 @@ The reasoning behind the design is in [docs/ARCHITECTURE.md](docs/ARCHITECTURE.m
 
 ## Known limits
 
-- Provider and model selectors list configured providers and model aliases. Marelle does not yet discover remote model catalogs.
+- The model picker queries the active provider's standard `/models` endpoint when available. Providers that do not expose a compatible catalogue continue to show configured aliases and the current model; discovery is best-effort and does not guarantee that every listed model is enabled for the account.
 - Selectors support mouse click-to-focus and wheel scrolling; the transcript and input editor remain keyboard-driven.
 - Ctrl-C exits the interactive session. It does not yet cancel only the current response.
 - The agent loop, permission-aware local tools and persistent local sessions are implemented, but Marelle remains a pre-alpha prototype; see [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for the current design and boundaries.

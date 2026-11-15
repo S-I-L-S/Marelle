@@ -1735,7 +1735,23 @@ fn repl_tui(
                 let session_picker = slash_command(&line)
                     .is_some_and(|(name, rest)| name == "session" && rest.is_empty());
                 let line = if model_picker {
-                    let items = model_selector_items(plan, &conversation);
+                    let mut discovered = Vec::new();
+                    if let Some(provider) = effective_provider_name(plan, &conversation) {
+                        tui.push_notice(tr_with(
+                            locale,
+                            "repl.models.discovering",
+                            &[("provider", &provider)],
+                        ))?;
+                        match discover_model_ids(runtime, plan, &conversation, env_vars) {
+                            Ok(models) => discovered = models,
+                            Err(reason) => tui.push_notice(tr_with(
+                                locale,
+                                "repl.models.unavailable",
+                                &[("reason", &reason)],
+                            ))?,
+                        }
+                    }
+                    let items = model_selector_items(plan, &conversation, &discovered);
                     match tui.select("Choose a model", &items)? {
                         Some(value) => format!("/model {value}"),
                         None => continue,
@@ -1904,9 +1920,55 @@ fn command_palette_items() -> Vec<SelectorItem> {
     .collect()
 }
 
-fn model_selector_items(plan: &Plan, conversation: &Conversation) -> Vec<SelectorItem> {
+/// Queries the active provider's standard model catalogue. Discovery is
+/// optional: the configured aliases and the current model remain available
+/// when a provider does not implement this endpoint.
+fn discover_model_ids(
+    runtime: &Runtime,
+    plan: &Plan,
+    conversation: &Conversation,
+    env_vars: &[(String, String)],
+) -> Result<Vec<String>, String> {
+    let provider_name = effective_provider_name(plan, conversation)
+        .ok_or_else(|| "no provider is selected".to_owned())?;
+    let provider = ProviderConfig::from_config(&plan.config, &provider_name)
+        .map_err(|error| error.to_string())?;
+    let lookup = |name: &str| env_lookup(env_vars, name);
+    let key = provider
+        .api_key_with(lookup)
+        .map_err(|error| error.to_string())?;
+    let network =
+        NetworkSettings::from_config(&plan.config, lookup).map_err(|error| error.to_string())?;
+    let client = Client::new(&provider, key, &network).map_err(|error| error.to_string())?;
+    runtime
+        .block_on(client.models())
+        .map_err(|error| error.to_string())
+}
+
+fn model_selector_items(
+    plan: &Plan,
+    conversation: &Conversation,
+    discovered: &[String],
+) -> Vec<SelectorItem> {
     let mut items = Vec::new();
     let current_provider = effective_provider_name(plan, conversation);
+
+    for model in discovered {
+        if items
+            .iter()
+            .any(|item: &SelectorItem| item.value.as_str() == model.as_str())
+        {
+            continue;
+        }
+        items.push(SelectorItem {
+            value: model.clone(),
+            label: model.clone(),
+            detail: current_provider
+                .as_deref()
+                .unwrap_or("discovered model")
+                .to_owned(),
+        });
+    }
 
     for key in plan.config.keys() {
         let Some(alias_name) = key
@@ -1923,6 +1985,9 @@ fn model_selector_items(plan: &Plan, conversation: &Conversation) -> Vec<Selecto
         else {
             continue;
         };
+        if items.iter().any(|item| item.value == alias_name) {
+            continue;
+        }
         let provider_key = format!("models.{alias_name}.provider");
         let provider = plan
             .config

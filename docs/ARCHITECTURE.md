@@ -19,6 +19,7 @@ marelle chat "question"                      crates/marelle-cli
         v
  marelle-providers   ProviderConfig (protocol, address, auth, where the key lives)
         |            Client::chat(request, sink)  --- HTTPS --->  the provider
+        |            Client::models() discovers a provider's optional model catalogue
         |            SSE parser + complete-response decoder + protocol decoders
         v
  sink in marelle-cli answer -> stdout; reasoning, usage, notes, errors -> stderr
@@ -37,7 +38,7 @@ The command line takes its input and output as parameters (`Io`), so a whole ses
 | `marelle-cli` | The `marelle` command | `chat`, `providers`, `config show/get/set/unset/schema/path` |
 | `marelle-testkit` | A mock HTTP server for tests (not published) | Used by the provider and CLI tests |
 
-Two protocols cover the vendors we know of: OpenAI-compatible endpoints (OpenAI, OpenRouter, Ollama, Z.ai, Zhipu and others) and the Anthropic Messages API. Support for another vendor goes through whichever of the two its API matches, and that has to be checked per vendor.
+Two protocols cover the vendors we know of: OpenAI-compatible endpoints (OpenAI, OpenRouter, Ollama, Z.ai, Zhipu and others) and the Anthropic Messages API. Support for another vendor goes through whichever of the two its API matches, and that has to be checked per vendor. Model discovery is a separate, optional GET request: OpenAI-compatible providers use their configured base URL plus `/models`, while Anthropic providers use `/v1/models`. A provider that does not implement the endpoint can still be used with a manually configured model name or alias.
 
 ## Decisions worth knowing
 
