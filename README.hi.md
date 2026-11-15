@@ -22,12 +22,12 @@
 
 ## इंस्टॉल
 
-**Android पर Termux।** [Releases](https://github.com/cornier-en-branche/marelle/releases) से पहले से बना (prebuilt) binary डाउनलोड करें, या फ़ोन पर ही build करें। कदम-दर-कदम: [docs/TERMUX.md](docs/TERMUX.md)।
+**Android पर Termux।** [Releases](https://github.com/S-I-L-S/marelle/releases) से पहले से बना (prebuilt) binary डाउनलोड करें, या फ़ोन पर ही build करें। कदम-दर-कदम: [docs/TERMUX.md](docs/TERMUX.md)।
 
 **Linux, और हर वह जगह जहाँ Rust चलता है।** Rust 1.85 या नया:
 
 ```sh
-cargo install --locked --git https://github.com/cornier-en-branche/marelle marelle-cli
+cargo install --locked --git https://github.com/S-I-L-S/marelle marelle-cli
 ```
 
 या repository को clone करें और `cargo build --release` चलाएँ। Binary `target/release/marelle` होता है, लगभग 4 MiB।
@@ -145,7 +145,7 @@ marelle chat -p gateway -m some-model "hello"
 | `network.ca_bundle` | none | भरोसेमंद certificate authorities की एक अतिरिक्त फ़ाइल |
 | `network.allow_insecure_http` | `false` | सादे `http` पर non-local host को key भेजने की अनुमति |
 | `update.check` | `true` | interactive session शुरू होने पर GitHub और GitLab से नया वर्शन पूछना |
-| `update.github_repo` | `cornier-en-branche/marelle` | GitHub `owner/repo` जिससे check नया release पूछता है |
+| `update.github_repo` | `S-I-L-S/marelle` | GitHub `owner/repo` जिससे check नया release पूछता है |
 | `update.gitlab_repo` | none | GitLab `owner/repo` जिससे check यह भी पूछता है। खाली होने पर GitLab बंद |
 | `update.timeout_secs` | `3` | check एक स्रोत पर कितने सेकंड बिता सकता है |
 

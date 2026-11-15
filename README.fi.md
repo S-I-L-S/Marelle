@@ -22,12 +22,12 @@ Suomi · [Français](README.fr.md) · [עברית](README.he.md) · [हिन�
 
 ## Asennus
 
-**Termux Androidilla.** Lataa valmis binääri [julkaisujen](https://github.com/cornier-en-branche/marelle/releases) sivulta tai rakenna se puhelimessa. Vaihe vaiheelta -opas: [docs/TERMUX.md](docs/TERMUX.md).
+**Termux Androidilla.** Lataa valmis binääri [julkaisujen](https://github.com/S-I-L-S/marelle/releases) sivulta tai rakenna se puhelimessa. Vaihe vaiheelta -opas: [docs/TERMUX.md](docs/TERMUX.md).
 
 **Linux ja kaikkialla missä Rust toimii.** Tarvitaan Rust 1.85 tai uudempi:
 
 ```sh
-cargo install --locked --git https://github.com/cornier-en-branche/marelle marelle-cli
+cargo install --locked --git https://github.com/S-I-L-S/marelle marelle-cli
 ```
 
 Tai kloonaa tietovarasto ja aja `cargo build --release`. Binääri on `target/release/marelle`, noin 4 MiB.
@@ -145,7 +145,7 @@ Asetukset tulevat kerroksina: sisäänrakennetut oletusarvot, sitten ympäristö
 | `network.ca_bundle` | ei ole | Lisätiedosto luotettavista varmenteen myöntäjistä |
 | `network.allow_insecure_http` | `false` | Salli avain tavallisella `http`-llä vieräälle isäntälle |
 | `update.check` | `true` | Kysy GitHub'iltä ja GitLab'iltä uudempaa versiota interaktiivisen istunnon alussa |
-| `update.github_repo` | `cornier-en-branche/marelle` | GitHub `owner/repo`, jolta tarkistus kysyy tuoreinta julkaisua |
+| `update.github_repo` | `S-I-L-S/marelle` | GitHub `owner/repo`, jolta tarkistus kysyy tuoreinta julkaisua |
 | `update.gitlab_repo` | ei ole | GitLab `owner/repo` samalle tarkistukselle. Tyhjä poistaa GitLabin käytöstä |
 | `update.timeout_secs` | `3` | Kuinka monta sekuntia tarkistus saa käyttää yhteen lähteeseen |
 

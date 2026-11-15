@@ -22,12 +22,12 @@
 
 ## التثبيت
 
-**Termux على أندرويد.** حمّل الملف التنفيذي الجاهز من صفحة [الإصدارات](https://github.com/cornier-en-branche/marelle/releases)، أو ابنه على الهاتف. دليل خطوة بخطوة: [docs/TERMUX.md](docs/TERMUX.md).
+**Termux على أندرويد.** حمّل الملف التنفيذي الجاهز من صفحة [الإصدارات](https://github.com/S-I-L-S/marelle/releases)، أو ابنه على الهاتف. دليل خطوة بخطوة: [docs/TERMUX.md](docs/TERMUX.md).
 
 **لينكس وأي مكان يعمل فيه Rust.** يتطلب Rust 1.85 أو أحدث:
 
 ```sh
-cargo install --locked --git https://github.com/cornier-en-branche/marelle marelle-cli
+cargo install --locked --git https://github.com/S-I-L-S/marelle marelle-cli
 ```
 
 أو استنسخ المستودع وشغّل `cargo build --release`. الملف التنفيذي هو `target/release/marelle`، نحو 4 مِيبايت.
@@ -145,7 +145,7 @@ marelle chat -p gateway -m some-model "hello"
 | `network.ca_bundle` | لا شيء | ملف إضافي من هيئات الشهادات الموثوقة |
 | `network.allow_insecure_http` | `false` | السماح لمفتاح عبر `http` المجرد إلى مضيف أجنبي |
 | `update.check` | `true` | سؤال GitHub وGitLab عن إصدار أحدث عند بدء جلسة تفاعلية |
-| `update.github_repo` | `cornier-en-branche/marelle` | `owner/repo` على GitHub يسأله الفحص عن أحدث إصدار |
+| `update.github_repo` | `S-I-L-S/marelle` | `owner/repo` على GitHub يسأله الفحص عن أحدث إصدار |
 | `update.gitlab_repo` | لا شيء | `owner/repo` على GitLab للفحص ذاته. الفراغ يطفئ GitLab |
 | `update.timeout_secs` | `3` | كم ثانية قد ينفق الفحص على مصدر واحد |
 

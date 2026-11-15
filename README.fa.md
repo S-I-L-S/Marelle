@@ -22,12 +22,12 @@
 
 ## نصب
 
-**Termux روی اندروید.** باینری آماده را از صفحه [انتشارات](https://github.com/cornier-en-branche/marelle/releases) بگیرید، یا روی گوشی بسازید. راهنمای گام‌به‌گام: [docs/TERMUX.md](docs/TERMUX.md).
+**Termux روی اندروید.** باینری آماده را از صفحه [انتشارات](https://github.com/S-I-L-S/marelle/releases) بگیرید، یا روی گوشی بسازید. راهنمای گام‌به‌گام: [docs/TERMUX.md](docs/TERMUX.md).
 
 **لینوکس و هرجا که Rust کار می‌کند.** Rust 1.85 یا تازه‌تر لازم است:
 
 ```sh
-cargo install --locked --git https://github.com/cornier-en-branche/marelle marelle-cli
+cargo install --locked --git https://github.com/S-I-L-S/marelle marelle-cli
 ```
 
 یا مخزن را کلون کنید و `cargo build --release` را اجرا کنید. باینری `target/release/marelle` است، حدود ۴ مِیبایت.
@@ -145,7 +145,7 @@ marelle chat -p gateway -m some-model "hello"
 | `network.ca_bundle` | هیچ | فایل افزوده از مراجع گواهی مورداعتماد |
 | `network.allow_insecure_http` | `false` | اجازه کلید روی `http` خام به میزبان بیگانه |
 | `update.check` | `true` | پرسیدن از GitHub و GitLab درباره نسخه‌ای نوتر در آغاز نشست تعاملی |
-| `update.github_repo` | `cornier-en-branche/marelle` | `owner/repo` گیت‌هابی که بازرسی از او جدیدترین انتشار را می‌پرسد |
+| `update.github_repo` | `S-I-L-S/marelle` | `owner/repo` گیت‌هابی که بازرسی از او جدیدترین انتشار را می‌پرسد |
 | `update.gitlab_repo` | هیچ | `owner/repo` گیت‌لبی برای همان بازرسی. خالی یعنی GitLab خاموش |
 | `update.timeout_secs` | `3` | بازرسی چند ثانیه می‌تواند برای یک منبع بگذارد |
 

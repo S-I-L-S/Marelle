@@ -22,12 +22,12 @@ A *Marelle* francia szó, a klasszikus ugrós gyerekjáték (hopscotch) neve. Mi
 
 ## Telepítés
 
-**Termux Androidon.** Töltsd le az előre elkészített binárist a [kiadások](https://github.com/cornier-en-branche/marelle/releases) oldaláról, vagy építsd meg magad a telefonon. Lépésről lépésre: [docs/TERMUX.md](docs/TERMUX.md).
+**Termux Androidon.** Töltsd le az előre elkészített binárist a [kiadások](https://github.com/S-I-L-S/marelle/releases) oldaláról, vagy építsd meg magad a telefonon. Lépésről lépésre: [docs/TERMUX.md](docs/TERMUX.md).
 
 **Linux, és mindenhol, ahol a Rust fut.** Rust 1.85 vagy újabb kell:
 
 ```sh
-cargo install --locked --git https://github.com/cornier-en-branche/marelle marelle-cli
+cargo install --locked --git https://github.com/S-I-L-S/marelle marelle-cli
 ```
 
 Vagy klónozd a repót, és futtasd a `cargo build --release`-t. A bináris a `target/release/marelle`, kb. 4 MiB.
@@ -145,7 +145,7 @@ A beállítások rétegekben jönnek: beépített alapértékek, aztán környez
 | `network.ca_bundle` | nincs | Extra fájl megbízható tanúsítványkiadókkal |
 | `network.allow_insecure_http` | `false` | Kulcs engedélyezése sima `http`-n távoli gépre |
 | `update.check` | `true` | GitHub és GitLab megkérdezése újabb verzióról interaktív munkamenet indításakor |
-| `update.github_repo` | `cornier-en-branche/marelle` | GitHub `owner/repo`, amelytől az ellenőrzés a legfrissebb kiadást kérdezi |
+| `update.github_repo` | `S-I-L-S/marelle` | GitHub `owner/repo`, amelytől az ellenőrzés a legfrissebb kiadást kérdezi |
 | `update.gitlab_repo` | nincs | GitLab `owner/repo` ugyanarra az ellenőrzésre. Üresen kikapcsolja a GitLabot |
 | `update.timeout_secs` | `3` | Hány másodpercet tölthet az ellenőrzés egy forráson |
 

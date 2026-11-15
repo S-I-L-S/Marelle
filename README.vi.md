@@ -22,12 +22,12 @@ Tiếng Việt · [简体中文](README.zh.md) · [繁體中文](README.zh-Hant.
 
 ## Cài đặt
 
-**Termux trên Android.** Tải binary dựng sẵn từ [Releases](https://github.com/cornier-en-branche/marelle/releases), hoặc build ngay trên điện thoại. Từng bước một: [docs/TERMUX.md](docs/TERMUX.md).
+**Termux trên Android.** Tải binary dựng sẵn từ [Releases](https://github.com/S-I-L-S/marelle/releases), hoặc build ngay trên điện thoại. Từng bước một: [docs/TERMUX.md](docs/TERMUX.md).
 
 **Linux, và bất cứ nơi nào Rust chạy được.** Rust 1.85 trở lên:
 
 ```sh
-cargo install --locked --git https://github.com/cornier-en-branche/marelle marelle-cli
+cargo install --locked --git https://github.com/S-I-L-S/marelle marelle-cli
 ```
 
 Hoặc clone repository rồi chạy `cargo build --release`. Binary là `target/release/marelle`, khoảng 4 MiB.
@@ -145,7 +145,7 @@ Cài đặt theo từng lớp: mặc định dựng sẵn, rồi biến môi tr�
 | `network.ca_bundle` | none | Một file bổ sung các certificate authority đáng tin |
 | `network.allow_insecure_http` | `false` | Cho phép gửi key qua `http` thường tới host không phải cục bộ |
 | `update.check` | `true` | Hỏi GitHub và GitLab về phiên bản mới hơn khi một phiên tương tác bắt đầu |
-| `update.github_repo` | `cornier-en-branche/marelle` | GitHub `owner/repo` mà bước kiểm tra hỏi bản phát hành mới nhất |
+| `update.github_repo` | `S-I-L-S/marelle` | GitHub `owner/repo` mà bước kiểm tra hỏi bản phát hành mới nhất |
 | `update.gitlab_repo` | none | GitLab `owner/repo` mà bước kiểm tra cũng hỏi. Bỏ trống thì tắt GitLab |
 | `update.timeout_secs` | `3` | Số giây bước kiểm tra được dành cho một nguồn |
 

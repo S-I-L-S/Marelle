@@ -22,12 +22,12 @@ Prinesite svoje API-ključe: Z.ai (Zhipu GLM), Anthropic, OpenAI, OpenRouter, lo
 
 ## Namestitev
 
-**Termux na Androidu.** Prenesite pripravljen binarni program s strani [izdaj](https://github.com/cornier-en-branche/marelle/releases) ali ga zgradite na telefonu. Vodnik korak za korakom: [docs/TERMUX.md](docs/TERMUX.md).
+**Termux na Androidu.** Prenesite pripravljen binarni program s strani [izdaj](https://github.com/S-I-L-S/marelle/releases) ali ga zgradite na telefonu. Vodnik korak za korakom: [docs/TERMUX.md](docs/TERMUX.md).
 
 **Linux in povsod, kjer teče Rust.** Potreben je Rust 1.85 ali novejši:
 
 ```sh
-cargo install --locked --git https://github.com/cornier-en-branche/marelle marelle-cli
+cargo install --locked --git https://github.com/S-I-L-S/marelle marelle-cli
 ```
 
 Ali klonirajte repozitorij in zaženite `cargo build --release`. Binarka je `target/release/marelle`, približno 4 MiB.
@@ -145,7 +145,7 @@ Nastavitve prihajajo v plasteh: vgrajene privzete vrednosti, potem okoljske spre
 | `network.ca_bundle` | nič | Dodatna datoteka zaupanja vrednih certifikacijskih teles |
 | `network.allow_insecure_http` | `false` | Dovoli ključ čez navaden `http` na tuj gostitelj |
 | `update.check` | `true` | Vprašaj GitHub in GitLab po novejši različici ob začetku interaktivne seje |
-| `update.github_repo` | `cornier-en-branche/marelle` | GitHub `owner/repo`, od katerega preverba vpraša po najnovejši izdaji |
+| `update.github_repo` | `S-I-L-S/marelle` | GitHub `owner/repo`, od katerega preverba vpraša po najnovejši izdaji |
 | `update.gitlab_repo` | nič | GitLab `owner/repo` za isto preverbo. Prazno izklopi GitLab |
 | `update.timeout_secs` | `3` | Koliko sekund preverba sme porabiti na enem viru |
 

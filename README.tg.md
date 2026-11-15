@@ -22,12 +22,12 @@
 
 ## Насбкунӣ
 
-**Termux дар Android.** Файли бинарии омодаро аз саҳифаи [нашрҳо](https://github.com/cornier-en-branche/marelle/releases) бегиред, ё дар телефон ҷамъбиёред. Роҳномаи қадам ба қадам: [docs/TERMUX.md](docs/TERMUX.md).
+**Termux дар Android.** Файли бинарии омодаро аз саҳифаи [нашрҳо](https://github.com/S-I-L-S/marelle/releases) бегиред, ё дар телефон ҷамъбиёред. Роҳномаи қадам ба қадам: [docs/TERMUX.md](docs/TERMUX.md).
 
 **Linux ва ҳар ҷое, ки фаъол аст Rust.** Rust 1.85 ё навтар лозим аст:
 
 ```sh
-cargo install --locked --git https://github.com/cornier-en-branche/marelle marelle-cli
+cargo install --locked --git https://github.com/S-I-L-S/marelle marelle-cli
 ```
 
 Ё анборро клон карда, `cargo build --release`-ро иҷро кунед. Бинарии файл `target/release/marelle` аст, тақрибан 4 МиБ.
@@ -145,7 +145,7 @@ marelle chat -p gateway -m some-model "hello"
 | `network.ca_bundle` | ҳеҷ | Файли иловагии марказҳои сертификатии боварӣ |
 | `network.allow_insecure_http` | `false` | Иҷозат додани калид дар `http`-и муқаррарӣ ба хостаи аҷнабӣ |
 | `update.check` | `true` | Пурсидани GitHub ва GitLab дар бораи версияи навтар дар ибтиёи сессияи интерактивӣ |
-| `update.github_repo` | `cornier-en-branche/marelle` | GitHub `owner/repo`, ки санҷиш аз он нашри навтарро мепурсад |
+| `update.github_repo` | `S-I-L-S/marelle` | GitHub `owner/repo`, ки санҷиш аз он нашри навтарро мепурсад |
 | `update.gitlab_repo` | ҳеҷ | GitLab `owner/repo` барои ҳамин санҷиш. Холӣ GitLab-ро хомӯш мекунад |
 | `update.timeout_secs` | `3` | Чанд сония санҷиш метавонад ба як манбаъ сарф кунад |
 

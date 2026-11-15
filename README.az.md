@@ -22,12 +22,12 @@
 
 ## Quraşdırma
 
-**Android-da Termux.** Hazır ikili faylı [buraxılışlar](https://github.com/cornier-en-branche/marelle/releases) səhifəsindən endirin, ya da telefon tərtib edin. Addım-addım bələdçi: [docs/TERMUX.md](docs/TERMUX.md).
+**Android-da Termux.** Hazır ikili faylı [buraxılışlar](https://github.com/S-I-L-S/marelle/releases) səhifəsindən endirin, ya da telefon tərtib edin. Addım-addım bələdçi: [docs/TERMUX.md](docs/TERMUX.md).
 
 **Linux və Rust-un işlədiyi hər yerdə.** Rust 1.85 və ya daha yenisi lazımdır:
 
 ```sh
-cargo install --locked --git https://github.com/cornier-en-branche/marelle marelle-cli
+cargo install --locked --git https://github.com/S-I-L-S/marelle marelle-cli
 ```
 
 Ya da anbarı klonlayın və `cargo build --release` işə salın. İkili fayl `target/release/marelle`-dir, təxminən 4 MiB.
@@ -145,7 +145,7 @@ Parametrlər təbəqələrlə gəlir: daxili susma dəyərləri, sonra mühit d�
 | `network.ca_bundle` | yoxdur | Etibarlı sertifikat mərkəzlərinin əlavə faylı |
 | `network.allow_insecure_http` | `false` | Açarın quru `http` üzərindən yad bir hosta yol verilməsi |
 | `update.check` | `true` | İnteraktiv sessiya başlayanda GitHub və GitLab-a daha yeni versiya barədə soruşmaq |
-| `update.github_repo` | `cornier-en-branche/marelle` | Yoxlamanın ən yeni buraxılışı soruşduğu GitHub `owner/repo` |
+| `update.github_repo` | `S-I-L-S/marelle` | Yoxlamanın ən yeni buraxılışı soruşduğu GitHub `owner/repo` |
 | `update.gitlab_repo` | yoxdur | Eyni yoxlama üçün GitLab `owner/repo`. Boş olsa GitLab söndürülür |
 | `update.timeout_secs` | `3` | Yoxlamanın bir mənbəyə nə qədər saniyə xərcləyə biləcəyi |
 

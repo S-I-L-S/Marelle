@@ -22,12 +22,12 @@ O'z API kalitlaringizni olib keling: Z.ai (Zhipu GLM), Anthropic, OpenAI, OpenRo
 
 ## O'rnatish
 
-**Android'dagi Termux.** Tayyor ikkilik faylni [chiqarishlar](https://github.com/cornier-en-branche/marelle/releases) sahifasidan yuklab oling, yoki telefon qiling. Qadam-qadam qo'llanma: [docs/TERMUX.md](docs/TERMUX.md).
+**Android'dagi Termux.** Tayyor ikkilik faylni [chiqarishlar](https://github.com/S-I-L-S/marelle/releases) sahifasidan yuklab oling, yoki telefon qiling. Qadam-qadam qo'llanma: [docs/TERMUX.md](docs/TERMUX.md).
 
 **Linux va Rust ishlaydigan hamma joyda.** Rust 1.85 yoki yangiroq kerak:
 
 ```sh
-cargo install --locked --git https://github.com/cornier-en-branche/marelle marelle-cli
+cargo install --locked --git https://github.com/S-I-L-S/marelle marelle-cli
 ```
 
 Yoki omborni klonlang va `cargo build --release` buyrug'ini bajaring. Ikkilik fayl — `target/release/marelle`, atigi 4 MiB.
@@ -145,7 +145,7 @@ Sozlamalar qatlamlar bilan keladi: ichki standart qiymatlar, keyin muhit o'zgaru
 | `network.ca_bundle` | yo'q | Ishonchli sertifikat beruvchi markazlarning qo'shimcha fayli |
 | `network.allow_insecure_http` | `false` | Kalitning yalang'och `http` orqali boshqa xostga borishiga ruxsat |
 | `update.check` | `true` | Interaktiv sessiya boshlanishida GitHub va GitLab'dan yangiroq versiya so'rash |
-| `update.github_repo` | `cornier-en-branche/marelle` | Tekshiruv eng yangi chiqarishni so'raydigan GitHub `owner/repo` |
+| `update.github_repo` | `S-I-L-S/marelle` | Tekshiruv eng yangi chiqarishni so'raydigan GitHub `owner/repo` |
 | `update.gitlab_repo` | yo'q | O'sha tekshiruv uchun GitLab `owner/repo`. Bo'sh bo'lsa GitLab o'chiriladi |
 | `update.timeout_secs` | `3` | Tekshiruv bitta manbaga necha sekund sarflashi mumkin |
 

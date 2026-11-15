@@ -22,12 +22,12 @@ Bawa API key anda sendiri: Z.ai (Zhipu GLM), Anthropic, OpenAI, OpenRouter, Olla
 
 ## Pemasangan
 
-**Termux pada Android.** Muat turun binary yang sedia dibina daripada [Releases](https://github.com/cornier-en-branche/marelle/releases), atau bina pada telefon itu sendiri. Langkah demi langkah: [docs/TERMUX.md](docs/TERMUX.md).
+**Termux pada Android.** Muat turun binary yang sedia dibina daripada [Releases](https://github.com/S-I-L-S/marelle/releases), atau bina pada telefon itu sendiri. Langkah demi langkah: [docs/TERMUX.md](docs/TERMUX.md).
 
 **Linux, dan di mana-mana sahaja Rust berjalan.** Rust 1.85 atau lebih baharu:
 
 ```sh
-cargo install --locked --git https://github.com/cornier-en-branche/marelle marelle-cli
+cargo install --locked --git https://github.com/S-I-L-S/marelle marelle-cli
 ```
 
 Atau klon repositori dan jalankan `cargo build --release`. Binary ialah `target/release/marelle`, kira-kira 4 MiB.
@@ -145,7 +145,7 @@ Tetapan datang berlapis: lalai terbina dalam, kemudian pemboleh ubah persekitara
 | `network.ca_bundle` | none | Satu fail tambahan pihak berkuasa sijil yang dipercayai |
 | `network.allow_insecure_http` | `false` | Membenarkan key melalui `http` biasa ke hos bukan setempat |
 | `update.check` | `true` | Bertanya kepada GitHub dan GitLab tentang versi lebih baharu apabila sesi interaktif bermula |
-| `update.github_repo` | `cornier-en-branche/marelle` | GitHub `owner/repo` yang semakan bertanya keluaran terbaharu |
+| `update.github_repo` | `S-I-L-S/marelle` | GitHub `owner/repo` yang semakan bertanya keluaran terbaharu |
 | `update.gitlab_repo` | none | GitLab `owner/repo` yang semakan turut bertanya. Kosong mematikan GitLab |
 | `update.timeout_secs` | `3` | Bilangan saat yang boleh digunakan semakan bagi satu sumber |
 

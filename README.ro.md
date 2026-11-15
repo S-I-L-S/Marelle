@@ -22,12 +22,12 @@ Adu-ți propriile chei API: Z.ai (Zhipu GLM), Anthropic, OpenAI, OpenRouter, un 
 
 ## Instalare
 
-**Termux pe Android.** Descarcă un binar gata construit de pe pagina [versiunilor](https://github.com/cornier-en-branche/marelle/releases) sau construiește-l pe telefon. Ghid pas cu pas: [docs/TERMUX.md](docs/TERMUX.md).
+**Termux pe Android.** Descarcă un binar gata construit de pe pagina [versiunilor](https://github.com/S-I-L-S/marelle/releases) sau construiește-l pe telefon. Ghid pas cu pas: [docs/TERMUX.md](docs/TERMUX.md).
 
 **Linux și oriunde rulează Rust.** Ai nevoie de Rust 1.85 sau mai nou:
 
 ```sh
-cargo install --locked --git https://github.com/cornier-en-branche/marelle marelle-cli
+cargo install --locked --git https://github.com/S-I-L-S/marelle marelle-cli
 ```
 
 Sau clonează depozitul și rulează `cargo build --release`. Binarul este `target/release/marelle`, aproximativ 4 MiB.
@@ -145,7 +145,7 @@ Setările vin în straturi: valori implicite incluse, apoi variabile de mediu, a
 | `network.ca_bundle` | nimic | Un fișier suplimentar de autorități de certificare de încredere |
 | `network.allow_insecure_http` | `false` | Permite o cheie pe `http` simplu către un host străin |
 | `update.check` | `true` | Întreabă GitHub și GitLab de o versiune mai nouă la începutul unei sesiuni interactive |
-| `update.github_repo` | `cornier-en-branche/marelle` | GitHub `owner/repo` la care verificarea întreabă de cea mai nouă versiune |
+| `update.github_repo` | `S-I-L-S/marelle` | GitHub `owner/repo` la care verificarea întreabă de cea mai nouă versiune |
 | `update.gitlab_repo` | nimic | GitLab `owner/repo` pentru aceeași verificare. Gol dezactivează GitLab |
 | `update.timeout_secs` | `3` | Câte secunde poate cheltui verificarea pe o sursă |
 

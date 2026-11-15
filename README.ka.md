@@ -22,12 +22,12 @@
 
 ## დაყენება
 
-**Termux Android-ზე.** ჩამოტვირთეთ მზა ბინარული ფაილი [გამოშვებების](https://github.com/cornier-en-branche/marelle/releases) გვერდიდან, ან ააგეთ ტელეფონზე. ნაბიჯ-ნაბიჯ გზამკვლევი: [docs/TERMUX.md](docs/TERMUX.md).
+**Termux Android-ზე.** ჩამოტვირთეთ მზა ბინარული ფაილი [გამოშვებების](https://github.com/S-I-L-S/marelle/releases) გვერდიდან, ან ააგეთ ტელეფონზე. ნაბიჯ-ნაბიჯ გზამკვლევი: [docs/TERMUX.md](docs/TERMUX.md).
 
 **Linux და ყველგან, სადაც Rust მუშაობს.** საჭიროა Rust 1.85 ან უფრო ახალი:
 
 ```sh
-cargo install --locked --git https://github.com/cornier-en-branche/marelle marelle-cli
+cargo install --locked --git https://github.com/S-I-L-S/marelle marelle-cli
 ```
 
 ან დააკლონეთ საცავი და გაუშვით `cargo build --release`. ბინარული ფაილია `target/release/marelle`, დაახლოებით 4 MiB.
@@ -145,7 +145,7 @@ marelle chat -p gateway -m some-model "hello"
 | `network.ca_bundle` | არცერთი | სანდო სერთიფიკაციული ორგანოების დამატებითი ფაილი |
 | `network.allow_insecure_http` | `false` | გასაღების უფლება მარტივ `http`-ზე უცხო ჰოსტამდე |
 | `update.check` | `true` | GitHub-ს და GitLab-ს ახალი ვერსიის კითხვა ინტერაქტიული სესიის დასაწყისში |
-| `update.github_repo` | `cornier-en-branche/marelle` | GitHub `owner/repo`, სადაც შემოწმება უახლეს გამოშვებას კითხავს |
+| `update.github_repo` | `S-I-L-S/marelle` | GitHub `owner/repo`, სადაც შემოწმება უახლეს გამოშვებას კითხავს |
 | `update.gitlab_repo` | არცერთი | GitLab `owner/repo` იმავე შემოწმებისთვის. ცარიელი გამორთავს GitLab-ს |
 | `update.timeout_secs` | `3` | რამდენი წამი შეუძლია შემოწმებას ერთ წყაროზე დახარჯოს |
 

@@ -22,12 +22,12 @@
 
 ## Տեղադրում
 
-**Termux Android-ի վրա։** Բեռնեք պատրաստի երկուական ֆայլը [թողարկումների](https://github.com/cornier-en-branche/marelle/releases) էջից, կամ հավաքեք հեռախոսում։ Քայլ առ քայլ ուղեցույց․ [docs/TERMUX.md](docs/TERMUX.md)։
+**Termux Android-ի վրա։** Բեռնեք պատրաստի երկուական ֆայլը [թողարկումների](https://github.com/S-I-L-S/marelle/releases) էջից, կամ հավաքեք հեռախոսում։ Քայլ առ քայլ ուղեցույց․ [docs/TERMUX.md](docs/TERMUX.md)։
 
 **Linux և ամենուր, որտեղ Rust-ն աշխատում է։** Անհրաժեշտ է Rust 1.85 կամ ավելի նոր․
 
 ```sh
-cargo install --locked --git https://github.com/cornier-en-branche/marelle marelle-cli
+cargo install --locked --git https://github.com/S-I-L-S/marelle marelle-cli
 ```
 
 Կամ կլոնավորեք պահոցը և գործարկեք `cargo build --release`։ Երկուական ֆայլը `target/release/marelle`-ն է, մոտ 4 ՄԲ։
@@ -145,7 +145,7 @@ marelle chat -p gateway -m some-model "hello"
 | `network.ca_bundle` | ոչ մի | Վստահելի վկայագրերի կենտրոնների հավելյալ ֆայլ |
 | `network.allow_insecure_http` | `false` | Թույլատրել բանալին մերկ `http`-ով օտար հյուրընկալողին |
 | `update.check` | `true` | GitHub-ին և GitLab-ին հարցնել ավելի նոր տարբերակի մասին ինտերակտիվ նիստի սկզբում |
-| `update.github_repo` | `cornier-en-branche/marelle` | GitHub `owner/repo`-ն, որից ստուգումը ամենանոր թողարկումը հարցնում է |
+| `update.github_repo` | `S-I-L-S/marelle` | GitHub `owner/repo`-ն, որից ստուգումը ամենանոր թողարկումը հարցնում է |
 | `update.gitlab_repo` | ոչ մի | GitLab `owner/repo`-ն նույն ստուգման համար։ Դատարկը անջատում է GitLab-ը |
 | `update.timeout_secs` | `3` | Քանի վայրկյան ստուգումը կարող է մի աղբյուրի վրա ծախսել |
 

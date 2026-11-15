@@ -22,12 +22,12 @@ Tooge oma API-võtmed: Z.ai (Zhipu GLM), Anthropic, OpenAI, OpenRouter, kohalik 
 
 ## Paigaldamine
 
-**Termux Androidil.** Laadige valmis binaarfail alla [väljalasete](https://github.com/cornier-en-branche/marelle/releases) lehelt või ehitage see telefonis. Samm-sammult juhend: [docs/TERMUX.md](docs/TERMUX.md).
+**Termux Androidil.** Laadige valmis binaarfail alla [väljalasete](https://github.com/S-I-L-S/marelle/releases) lehelt või ehitage see telefonis. Samm-sammult juhend: [docs/TERMUX.md](docs/TERMUX.md).
 
 **Linux ja kõikjal, kus Rust töötab.** Vaja on Rust 1.85 või uuem:
 
 ```sh
-cargo install --locked --git https://github.com/cornier-en-branche/marelle marelle-cli
+cargo install --locked --git https://github.com/S-I-L-S/marelle marelle-cli
 ```
 
 Või kloonige repositoorium ja käivitage `cargo build --release`. Binaar on `target/release/marelle`, umbes 4 MiB.
@@ -145,7 +145,7 @@ Seaded tulevad kihtidena: sisseehitatud vaikeväärtused, siis keskkonnamuutujad
 | `network.ca_bundle` | puudub | Lisafail usaldusväärsete sertifitseerimisasutustega |
 | `network.allow_insecure_http` | `false` | Lubada võti lihtsa `http` kaudu võõrale hostile |
 | `update.check` | `true` | Küsida GitHub'ilt ja GitLab'ilt uuemat versiooni interaktiivse sessiooni alguses |
-| `update.github_repo` | `cornier-en-branche/marelle` | GitHub `owner/repo`, kust kontroll küsib kõige uuemat väljalaset |
+| `update.github_repo` | `S-I-L-S/marelle` | GitHub `owner/repo`, kust kontroll küsib kõige uuemat väljalaset |
 | `update.gitlab_repo` | puudub | GitLab `owner/repo` sama kontrolli jaoks. Tühjaks jättes on GitLab väljas |
 | `update.timeout_secs` | `3` | Mitu sekundit kontroll tohib ühele allikale kulutada |
 

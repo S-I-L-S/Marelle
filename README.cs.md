@@ -22,12 +22,12 @@ Přineste si vlastní API klíče: Z.ai (Zhipu GLM), Anthropic, OpenAI, OpenRout
 
 ## Instalace
 
-**Termux na Androidu.** Stáhněte hotový binární soubor ze stránky [vydání](https://github.com/cornier-en-branche/marelle/releases), nebo si ho sestavte přímo na telefonu. Podrobný postup: [docs/TERMUX.md](docs/TERMUX.md).
+**Termux na Androidu.** Stáhněte hotový binární soubor ze stránky [vydání](https://github.com/S-I-L-S/marelle/releases), nebo si ho sestavte přímo na telefonu. Podrobný postup: [docs/TERMUX.md](docs/TERMUX.md).
 
 **Linux a všude tam, kde běží Rust.** Potřebujete Rust 1.85 nebo novější:
 
 ```sh
-cargo install --locked --git https://github.com/cornier-en-branche/marelle marelle-cli
+cargo install --locked --git https://github.com/S-I-L-S/marelle marelle-cli
 ```
 
 Nebo klonujte repozitář a spusťte `cargo build --release`. Binárka je `target/release/marelle`, zhruba 4 MiB.
@@ -145,7 +145,7 @@ Nastavení přicházejí ve vrstvách: vestavěné výchozí hodnoty, potom prom
 | `network.ca_bundle` | žádný | Doplněk: soubor důvěryhodných certifikačních autorit |
 | `network.allow_insecure_http` | `false` | Povolit klíč přes prostý `http` na cizí host |
 | `update.check` | `true` | Ptát se GitHubu a GitLabu na novější verzi při startu interaktivní relace |
-| `update.github_repo` | `cornier-en-branche/marelle` | GitHub `owner/repo`, u kterého kontrola ptá po nejnovějším vydání |
+| `update.github_repo` | `S-I-L-S/marelle` | GitHub `owner/repo`, u kterého kontrola ptá po nejnovějším vydání |
 | `update.gitlab_repo` | žádné | GitLab `owner/repo` pro tutéž kontrolu. Prázdné vypíná GitLab |
 | `update.timeout_secs` | `3` | Kolik sekund smí kontrola strávit na jednom zdroji |
 

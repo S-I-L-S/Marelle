@@ -22,12 +22,12 @@ Breng je eigen API-sleutels mee: Z.ai (Zhipu GLM), Anthropic, OpenAI, OpenRouter
 
 ## Installatie
 
-**Termux op Android.** Download een kant-en-klare binair van de [uitgavenpagina](https://github.com/cornier-en-branche/marelle/releases), of bou hem op de telefoon. Stap voor stap: [docs/TERMUX.md](docs/TERMUX.md).
+**Termux op Android.** Download een kant-en-klare binair van de [uitgavenpagina](https://github.com/S-I-L-S/marelle/releases), of bou hem op de telefoon. Stap voor stap: [docs/TERMUX.md](docs/TERMUX.md).
 
 **Linux en overal waar Rust draait.** Rust 1.85 of nieuwer:
 
 ```sh
-cargo install --locked --git https://github.com/cornier-en-branche/marelle marelle-cli
+cargo install --locked --git https://github.com/S-I-L-S/marelle marelle-cli
 ```
 
 Of kloon de repository en draai `cargo build --release`. De binair is `target/release/marelle`, zo'n 4 MiB.
@@ -145,7 +145,7 @@ Instellingen komen in lagen: ingebouwde standaarden, dan omgevingsvariabelen, da
 | `network.ca_bundle` | geen | Een extra bestand met vertrouwde certificeringsinstanties |
 | `network.allow_insecure_http` | `false` | Een sleutel toelaten over kale `http` naar een vreemde host |
 | `update.check` | `true` | GitHub en GitLab vragen om een nieuwere versie bij de start van een interactieve sessie |
-| `update.github_repo` | `cornier-en-branche/marelle` | GitHub `owner/repo` waaraan de check om de nieuwste uitgave vraagt |
+| `update.github_repo` | `S-I-L-S/marelle` | GitHub `owner/repo` waaraan de check om de nieuwste uitgave vraagt |
 | `update.gitlab_repo` | geen | GitLab `owner/repo` voor dezelfde check. Leeg schakelt GitLab uit |
 | `update.timeout_secs` | `3` | Hoeveel seconden de check op één bron mag besteden |
 

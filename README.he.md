@@ -22,12 +22,12 @@
 
 ## התקנה
 
-**Termux באנדרואיד.** הורד בינארי מוכן מדף [המהדורות](https://github.com/cornier-en-branche/marelle/releases), או בנה אותו בטלפון. מדריך צעד אחר צעד: [docs/TERMUX.md](docs/TERMUX.md).
+**Termux באנדרואיד.** הורד בינארי מוכן מדף [המהדורות](https://github.com/S-I-L-S/marelle/releases), או בנה אותו בטלפון. מדריך צעד אחר צעד: [docs/TERMUX.md](docs/TERMUX.md).
 
 **לינוקס וכל מקום שבו Rust רץ.** נדרש Rust 1.85 או חדש יותר:
 
 ```sh
-cargo install --locked --git https://github.com/cornier-en-branche/marelle marelle-cli
+cargo install --locked --git https://github.com/S-I-L-S/marelle marelle-cli
 ```
 
 או שכפל את המאגר והרץ `cargo build --release`. הבינארי הוא `target/release/marelle`, בסביבות 4 MiB.
@@ -145,7 +145,7 @@ marelle chat -p gateway -m some-model "hello"
 | `network.ca_bundle` | אין | קובץ נוסף של רשויות תעוד מהימנות |
 | `network.allow_insecure_http` | `false` | לאפשר מפתח על גבי `http` חשוף אל מארח זר |
 | `update.check` | `true` | לשאול את GitHub ו-GitLab על גרסה חדשה יותר בפתיחת סשן אינטראקטיבי |
-| `update.github_repo` | `cornier-en-branche/marelle` | `owner/repo` ב-GitHub שממנו הבדיקה שואלת את המהדורה החדשה ביותר |
+| `update.github_repo` | `S-I-L-S/marelle` | `owner/repo` ב-GitHub שממנו הבדיקה שואלת את המהדורה החדשה ביותר |
 | `update.gitlab_repo` | אין | `owner/repo` ב-GitLab לאותה בדיקה. ריק מכבה את GitLab |
 | `update.timeout_secs` | `3` | כמה שניות הבדיקה רשאית להקצות למקור אחד |
 

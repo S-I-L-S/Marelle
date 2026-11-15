@@ -290,7 +290,7 @@ pub(crate) const SETTINGS: &[SettingSpec] = &[
     SettingSpec {
         key: "update.github_repo",
         kind: Kind::String,
-        default: Some("cornier-en-branche/marelle"),
+        default: Some("S-I-L-S/marelle"),
         description: "GitHub owner/repo the update check asks for the newest release.",
     },
     SettingSpec {

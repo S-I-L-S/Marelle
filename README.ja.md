@@ -22,12 +22,12 @@ API キーは自分で持ち込んでください：Z.ai（Zhipu GLM）、Anthro
 
 ## インストール
 
-**Android の Termux。** [リリースページ](https://github.com/cornier-en-branche/marelle/releases)からビルド済みバイナリをダウンロードするか、スマホ上でビルドしてください。手順ガイド：[docs/TERMUX.md](docs/TERMUX.md)。
+**Android の Termux。** [リリースページ](https://github.com/S-I-L-S/marelle/releases)からビルド済みバイナリをダウンロードするか、スマホ上でビルドしてください。手順ガイド：[docs/TERMUX.md](docs/TERMUX.md)。
 
 **Linux、および Rust が動くすべての場所。** Rust 1.85 以上が必要です：
 
 ```sh
-cargo install --locked --git https://github.com/cornier-en-branche/marelle marelle-cli
+cargo install --locked --git https://github.com/S-I-L-S/marelle marelle-cli
 ```
 
 あるいはリポジトリをクローンして `cargo build --release` を実行してください。バイナリは `target/release/marelle`、約 4 MiB です。
@@ -145,7 +145,7 @@ marelle chat -p gateway -m some-model "hello"
 | `network.ca_bundle` | なし | 信頼する認証局を追加するファイル |
 | `network.allow_insecure_http` | `false` | キーが生の `http` で別ホストへ行くのを許可する |
 | `update.check` | `true` | 対話セッションの開始時に、GitHub と GitLab に新しいバージョンがないか尋ねる |
-| `update.github_repo` | `cornier-en-branche/marelle` | チェックが最新リリースを尋ねる GitHub `owner/repo` |
+| `update.github_repo` | `S-I-L-S/marelle` | チェックが最新リリースを尋ねる GitHub `owner/repo` |
 | `update.gitlab_repo` | なし | 同じチェックが尋ねる GitLab `owner/repo`。空なら GitLab は無効 |
 | `update.timeout_secs` | `3` | チェックが一つの情報源に割ける秒数 |
 

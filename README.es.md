@@ -22,12 +22,12 @@ Trae tus propias claves de API: Z.ai (Zhipu GLM), Anthropic, OpenAI, OpenRouter,
 
 ## Instalación
 
-**Termux en Android.** Descarga un binario ya construido desde la página de [lanzamientos](https://github.com/cornier-en-branche/marelle/releases), o compílalo en el teléfono. Guía paso a paso: [docs/TERMUX.md](docs/TERMUX.md).
+**Termux en Android.** Descarga un binario ya construido desde la página de [lanzamientos](https://github.com/S-I-L-S/marelle/releases), o compílalo en el teléfono. Guía paso a paso: [docs/TERMUX.md](docs/TERMUX.md).
 
 **Linux y dondequiera que funcione Rust.** Rust 1.85 o más nuevo:
 
 ```sh
-cargo install --locked --git https://github.com/cornier-en-branche/marelle marelle-cli
+cargo install --locked --git https://github.com/S-I-L-S/marelle marelle-cli
 ```
 
 O clona el repositorio y ejecuta `cargo build --release`. El binario es `target/release/marelle`, unos 4 MiB.
@@ -145,7 +145,7 @@ Los ajustes llegan en capas: valores predeterminados integrados, luego variables
 | `network.ca_bundle` | ninguno | Un archivo extra de autoridades de certificación de confianza |
 | `network.allow_insecure_http` | `false` | Permitir una clave por `http` simple hacia un host ajeno |
 | `update.check` | `true` | Preguntar a GitHub y GitLab por una versión más nueva al comienzo de una sesión interactiva |
-| `update.github_repo` | `cornier-en-branche/marelle` | GitHub `owner/repo` al que la comprobación pide el lanzamiento más nuevo |
+| `update.github_repo` | `S-I-L-S/marelle` | GitHub `owner/repo` al que la comprobación pide el lanzamiento más nuevo |
 | `update.gitlab_repo` | ninguno | GitLab `owner/repo` para la misma comprobación. Vacío desactiva GitLab |
 | `update.timeout_secs` | `3` | Cuántos segundos puede gastar la comprobación en una fuente |
 

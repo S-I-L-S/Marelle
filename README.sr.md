@@ -22,12 +22,12 @@
 
 ## Инсталација
 
-**Termux на Андроиду.** Преузмите готови бинарник са странице [издања](https://github.com/cornier-en-branche/marelle/releases) или га саградите на телефону. Упутство корак по корак: [docs/TERMUX.md](docs/TERMUX.md).
+**Termux на Андроиду.** Преузмите готови бинарник са странице [издања](https://github.com/S-I-L-S/marelle/releases) или га саградите на телефону. Упутство корак по корак: [docs/TERMUX.md](docs/TERMUX.md).
 
 **Linux и свуда где ради Rust.** Потребан је Rust 1.85 или новији:
 
 ```sh
-cargo install --locked --git https://github.com/cornier-en-branche/marelle marelle-cli
+cargo install --locked --git https://github.com/S-I-L-S/marelle marelle-cli
 ```
 
 Или клонирајте репозиторијум и покрените `cargo build --release`. Бинарник је `target/release/marelle`, око 4 MiB.
@@ -145,7 +145,7 @@ marelle chat -p gateway -m some-model "hello"
 | `network.ca_bundle` | ништа | Додатна датотека поузданих сертификатних органа |
 | `network.allow_insecure_http` | `false` | Дозволити кључ преко обичног `http` на туђ хост |
 | `update.check` | `true` | Питати GitHub и GitLab за новију верзију при почетку интерактивне сесије |
-| `update.github_repo` | `cornier-en-branche/marelle` | GitHub `owner/repo` од којег провера пита за најновије издање |
+| `update.github_repo` | `S-I-L-S/marelle` | GitHub `owner/repo` од којег провера пита за најновије издање |
 | `update.gitlab_repo` | ништа | GitLab `owner/repo` за исти проверу. Празно искључује GitLab |
 | `update.timeout_secs` | `3` | Колико секунди провера може потрошити на један извор |
 

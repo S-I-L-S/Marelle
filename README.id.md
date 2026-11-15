@@ -22,12 +22,12 @@ Bahasa Indonesia · [Italiano](README.it.md) · [日本語](README.ja.md) · [�
 
 ## Instal
 
-**Termux di Android.** Unduh binary yang sudah jadi dari [Releases](https://github.com/cornier-en-branche/marelle/releases), atau build langsung di ponsel. Langkah demi langkah: [docs/TERMUX.md](docs/TERMUX.md).
+**Termux di Android.** Unduh binary yang sudah jadi dari [Releases](https://github.com/S-I-L-S/marelle/releases), atau build langsung di ponsel. Langkah demi langkah: [docs/TERMUX.md](docs/TERMUX.md).
 
 **Linux, dan di mana pun Rust bisa berjalan.** Rust 1.85 atau lebih baru:
 
 ```sh
-cargo install --locked --git https://github.com/cornier-en-branche/marelle marelle-cli
+cargo install --locked --git https://github.com/S-I-L-S/marelle marelle-cli
 ```
 
 Atau clone repositori lalu jalankan `cargo build --release`. Binary-nya adalah `target/release/marelle`, sekitar 4 MiB.
@@ -145,7 +145,7 @@ Pengaturan datang berlapis: bawaan tertanam, lalu variabel lingkungan, lalu flag
 | `network.ca_bundle` | none | File tambahan berisi certificate authority tepercaya |
 | `network.allow_insecure_http` | `false` | Mengizinkan key dikirim lewat `http` biasa ke host non-lokal |
 | `update.check` | `true` | Menanyakan GitHub dan GitLab tentang versi lebih baru saat sesi interaktif dimulai |
-| `update.github_repo` | `cornier-en-branche/marelle` | GitHub `owner/repo` yang ditanya pemeriksaan tentang rilis terbaru |
+| `update.github_repo` | `S-I-L-S/marelle` | GitHub `owner/repo` yang ditanya pemeriksaan tentang rilis terbaru |
 | `update.gitlab_repo` | none | GitLab `owner/repo` yang juga ditanya pemeriksaan. Kosong menonaktifkan GitLab |
 | `update.timeout_secs` | `3` | Detik yang boleh dipakai pemeriksaan untuk satu sumber |
 

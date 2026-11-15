@@ -22,12 +22,12 @@ Atvediet savus API atslēgas: Z.ai (Zhipu GLM), Anthropic, OpenAI, OpenRouter, l
 
 ## Instalēšana
 
-**Termux uz Androida.** Lejupielādējiet gatavu binārfailu no [laidienu](https://github.com/cornier-en-branche/marelle/releases) lapas vai uzbūvējiet to telefonā. Solis pa solim ceļvedis: [docs/TERMUX.md](docs/TERMUX.md).
+**Termux uz Androida.** Lejupielādējiet gatavu binārfailu no [laidienu](https://github.com/S-I-L-S/marelle/releases) lapas vai uzbūvējiet to telefonā. Solis pa solim ceļvedis: [docs/TERMUX.md](docs/TERMUX.md).
 
 **Linux un visur, kur strādā Rust.** Vajag Rust 1.85 vai jaunāku:
 
 ```sh
-cargo install --locked --git https://github.com/cornier-en-branche/marelle marelle-cli
+cargo install --locked --git https://github.com/S-I-L-S/marelle marelle-cli
 ```
 
 Vai arī klonējiet repozitoriju un palaidiet `cargo build --release`. Binārā fails ir `target/release/marelle`, apmēram 4 MiB.
@@ -145,7 +145,7 @@ Iestatījumi nāk slāņos: iebūvētas noklusējuma vērtības, tad vides main�
 | `network.ca_bundle` | nav | Papildu fails ar uzticamiem sertifikācijas organismiem |
 | `network.allow_insecure_http` | `false` | Atļaut atslēgu pār vienkāršu `http` uz svešu resursdatoru |
 | `update.check` | `true` | Jautāt GitHub un GitLab par jaunāku versiju interaktīvas sesijas sākumā |
-| `update.github_repo` | `cornier-en-branche/marelle` | GitHub `owner/repo`, no kura pārbaude jautā par jaunāko laidienu |
+| `update.github_repo` | `S-I-L-S/marelle` | GitHub `owner/repo`, no kura pārbaude jautā par jaunāko laidienu |
 | `update.gitlab_repo` | nav | GitLab `owner/repo` tai pašai pārbaudei. Tukšs izslēdz GitLab |
 | `update.timeout_secs` | `3` | Cik sekunžu pārbaude var pavadīt pie viena avota |
 

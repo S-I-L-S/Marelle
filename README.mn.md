@@ -22,12 +22,12 @@
 
 ## Суулгах
 
-**Андройд дээрх Termux.** Бэлэн бинарийг [гаргасан хувилбаруудын](https://github.com/cornier-en-branche/marelle/releases) хуудаснаас татаж ав, эсвэл утаснаас угсар. Алхам алхмаар гарын авлага: [docs/TERMUX.md](docs/TERMUX.md).
+**Андройд дээрх Termux.** Бэлэн бинарийг [гаргасан хувилбаруудын](https://github.com/S-I-L-S/marelle/releases) хуудаснаас татаж ав, эсвэл утаснаас угсар. Алхам алхмаар гарын авлага: [docs/TERMUX.md](docs/TERMUX.md).
 
 **Линукс болон Rust ажилладаг бүх газарт.** Rust 1.85 эсвэл түүнээс шинэ хэрэгтэй:
 
 ```sh
-cargo install --locked --git https://github.com/cornier-en-branche/marelle marelle-cli
+cargo install --locked --git https://github.com/S-I-L-S/marelle marelle-cli
 ```
 
 Эсвэл сан хуваарийг клон хийгээд `cargo build --release` ажиллуул. Бинар файл нь `target/release/marelle`, орчим 4 МиБ.
@@ -145,7 +145,7 @@ marelle chat -p gateway -m some-model "hello"
 | `network.ca_bundle` | байхгүй | Итгэмжлэгдсэн гэрчилгээ олгох байгууллагын нэмэлт файл |
 | `network.allow_insecure_http` | `false` | Түлхүүрийг энгийн `http`-ээр өөр хост руу зөвшөөрөх |
 | `update.check` | `true` | Интерактив сешний эхлэлд GitHub болон GitLab-аас шинэ хувилбар байгаа эсэхийг асуух |
-| `update.github_repo` | `cornier-en-branche/marelle` | Шалгалт хамгийн сүүлчийн гаргасан хувилбарыг асуух GitHub `owner/repo` |
+| `update.github_repo` | `S-I-L-S/marelle` | Шалгалт хамгийн сүүлчийн гаргасан хувилбарыг асуух GitHub `owner/repo` |
 | `update.gitlab_repo` | байхгүй | Мөнхүү шалгалтын GitLab `owner/repo`. Хоосон бол GitLab унтраана |
 | `update.timeout_secs` | `3` | Шалгалт нэг эх сурвалжад хэдэн секунд зарцуулах вэ |
 

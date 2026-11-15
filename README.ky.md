@@ -22,12 +22,12 @@
 
 ## Орнотуу
 
-**Андроидтеги Termux.** Даяр бинар файлды [чыгарылыштар](https://github.com/cornier-en-branche/marelle/releases) барагынан жүктөп алыңыз, же телефонда топтогула. Кадам-кадам менен нускамо: [docs/TERMUX.md](docs/TERMUX.md).
+**Андроидтеги Termux.** Даяр бинар файлды [чыгарылыштар](https://github.com/S-I-L-S/marelle/releases) барагынан жүктөп алыңыз, же телефонда топтогула. Кадам-кадам менен нускамо: [docs/TERMUX.md](docs/TERMUX.md).
 
 **Linux жана Rust иштеген ар жерде.** Rust 1.85 же жаңысы керек:
 
 ```sh
-cargo install --locked --git https://github.com/cornier-en-branche/marelle marelle-cli
+cargo install --locked --git https://github.com/S-I-L-S/marelle marelle-cli
 ```
 
 Же болбосо репозиторийди клондоңуз да, `cargo build --release` күйгүзүңүз. Бинар файл — `target/release/marelle`, болжол менен 4 МиБ.
@@ -145,7 +145,7 @@ marelle chat -p gateway -m some-model "hello"
 | `network.ca_bundle` | жок | Ишенимдүү күбөлүк берүү мекемелеринин кошумча файлы |
 | `network.allow_insecure_http` | `false` | Ачкычтын жынаа `http` аркылуу бөтөн хостко барууга уруксат |
 | `update.check` | `true` | Интерактивдүү сессия башталганда GitHub жана GitLab'дан жаңыраак нуска сураш |
-| `update.github_repo` | `cornier-en-branche/marelle` | Текшерүү эң жаңы чыгарылышты сураган GitHub `owner/repo` |
+| `update.github_repo` | `S-I-L-S/marelle` | Текшерүү эң жаңы чыгарылышты сураган GitHub `owner/repo` |
 | `update.gitlab_repo` | жок | Ошол эле текшерүү үчүн GitLab `owner/repo`. Бош болсо GitLab өчүрүлөт |
 | `update.timeout_secs` | `3` | Текшерүү бир булакка канча секунд жумшай алат |
 

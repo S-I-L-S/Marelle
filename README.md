@@ -22,12 +22,12 @@ English · [العربية](README.ar.md) · [Azərbaycanca](README.az.md) · [�
 
 ## Install
 
-**Termux on Android.** Download a prebuilt binary from [Releases](https://github.com/cornier-en-branche/marelle/releases), or build on the phone. Step by step: [docs/TERMUX.md](docs/TERMUX.md).
+**Termux on Android.** Download a prebuilt binary from [Releases](https://github.com/S-I-L-S/marelle/releases), or build on the phone. Step by step: [docs/TERMUX.md](docs/TERMUX.md).
 
 **Linux, and anywhere else Rust runs.** Rust 1.85 or newer:
 
 ```sh
-cargo install --locked --git https://github.com/cornier-en-branche/marelle marelle-cli
+cargo install --locked --git https://github.com/S-I-L-S/marelle marelle-cli
 ```
 
 Or clone the repository and run `cargo build --release`. The binary is `target/release/marelle`, about 4 MiB.
@@ -145,7 +145,7 @@ Settings come in layers: built-in defaults, then environment variables, then fla
 | `network.ca_bundle` | none | An extra file of trusted certificate authorities |
 | `network.allow_insecure_http` | `false` | Allow a key over plain `http` to a non-local host |
 | `update.check` | `true` | Ask GitHub and GitLab for a newer version when an interactive session starts |
-| `update.github_repo` | `cornier-en-branche/marelle` | GitHub `owner/repo` the check asks for the newest release |
+| `update.github_repo` | `S-I-L-S/marelle` | GitHub `owner/repo` the check asks for the newest release |
 | `update.gitlab_repo` | none | GitLab `owner/repo` the check also asks. Empty disables GitLab |
 | `update.timeout_secs` | `3` | Seconds the check may spend on one source |
 

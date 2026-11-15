@@ -22,12 +22,12 @@ API 키는 직접 가져오세요: Z.ai(Zhipu GLM), Anthropic, OpenAI, OpenRoute
 
 ## 설치
 
-**안드로이드의 Termux.** [릴리스 페이지](https://github.com/cornier-en-branche/marelle/releases)에서 미리 빌드된 바이너리를 받거나, 휴대폰에서 직접 빌드하세요. 단계별 안내: [docs/TERMUX.md](docs/TERMUX.md).
+**안드로이드의 Termux.** [릴리스 페이지](https://github.com/S-I-L-S/marelle/releases)에서 미리 빌드된 바이너리를 받거나, 휴대폰에서 직접 빌드하세요. 단계별 안내: [docs/TERMUX.md](docs/TERMUX.md).
 
 **Linux, 그리고 Rust가 돌아가는 모든 곳.** Rust 1.85 이상이 필요합니다:
 
 ```sh
-cargo install --locked --git https://github.com/cornier-en-branche/marelle marelle-cli
+cargo install --locked --git https://github.com/S-I-L-S/marelle marelle-cli
 ```
 
 또는 저장소를 클론하고 `cargo build --release`를 실행하세요. 바이너리는 `target/release/marelle`이며, 약 4 MiB입니다.
@@ -145,7 +145,7 @@ marelle chat -p gateway -m some-model "hello"
 | `network.ca_bundle` | 없음 | 신뢰하는 인증 기관을 추가하는 파일 |
 | `network.allow_insecure_http` | `false` | 키가 날 `http`로 다른 호스트에 가는 것을 허용 |
 | `update.check` | `true` | 대화형 세션이 시작될 때 GitHub와 GitLab에 더 새로운 버전을 물어봄 |
-| `update.github_repo` | `cornier-en-branche/marelle` | 점검이 최신 릴리스를 물어보는 GitHub `owner/repo` |
+| `update.github_repo` | `S-I-L-S/marelle` | 점검이 최신 릴리스를 물어보는 GitHub `owner/repo` |
 | `update.gitlab_repo` | 없음 | 같은 점검을 위한 GitLab `owner/repo`. 비워 두면 GitLab은 꺼짐 |
 | `update.timeout_secs` | `3` | 점검이 한 출처에 쓸 수 있는 초 |
 

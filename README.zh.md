@@ -22,12 +22,12 @@
 
 ## 安装
 
-**Android 上的 Termux。** 从[发布页](https://github.com/cornier-en-branche/marelle/releases)下载预编译的二进制文件，或在手机上自行构建。逐步指南：[docs/TERMUX.md](docs/TERMUX.md)。
+**Android 上的 Termux。** 从[发布页](https://github.com/S-I-L-S/marelle/releases)下载预编译的二进制文件，或在手机上自行构建。逐步指南：[docs/TERMUX.md](docs/TERMUX.md)。
 
 **Linux，以及其他任何能运行 Rust 的地方。** 需要 Rust 1.85 或更新版本：
 
 ```sh
-cargo install --locked --git https://github.com/cornier-en-branche/marelle marelle-cli
+cargo install --locked --git https://github.com/S-I-L-S/marelle marelle-cli
 ```
 
 或者克隆本仓库并运行 `cargo build --release`。二进制文件为 `target/release/marelle`，约 4 MiB。
@@ -145,7 +145,7 @@ marelle chat -p gateway -m some-model "hello"
 | `network.ca_bundle` | 无 | 额外的受信任证书机构文件 |
 | `network.allow_insecure_http` | `false` | 允许密钥经纯 `http` 发往非本地主机 |
 | `update.check` | `true` | 交互会话启动时向 GitHub 和 GitLab 询问更新版本 |
-| `update.github_repo` | `cornier-en-branche/marelle` | 检查向其询问最新发布的 GitHub `owner/repo` |
+| `update.github_repo` | `S-I-L-S/marelle` | 检查向其询问最新发布的 GitHub `owner/repo` |
 | `update.gitlab_repo` | 无 | 同一检查也会询问的 GitLab `owner/repo`。留空则禁用 GitLab |
 | `update.timeout_secs` | `3` | 检查在每个来源上可用的秒数 |
 

@@ -22,12 +22,12 @@ Lietuvių · [Latviešu](README.lv.md) · [Монгол](README.mn.md) · [Bahas
 
 ## Įdiegimas
 
-**Termux Android'e.** Atsisiųskite paruoštą dvejetainį failą iš [leidimų](https://github.com/cornier-en-branche/marelle/releases) puslapio arba sukompiliuokite telefone. Žingsnis po žingsnio vadovas: [docs/TERMUX.md](docs/TERMUX.md).
+**Termux Android'e.** Atsisiųskite paruoštą dvejetainį failą iš [leidimų](https://github.com/S-I-L-S/marelle/releases) puslapio arba sukompiliuokite telefone. Žingsnis po žingsnio vadovas: [docs/TERMUX.md](docs/TERMUX.md).
 
 **Linux ir visur, kur veikia Rust.** Reikia Rust 1.85 ar naujesnio:
 
 ```sh
-cargo install --locked --git https://github.com/cornier-en-branche/marelle marelle-cli
+cargo install --locked --git https://github.com/S-I-L-S/marelle marelle-cli
 ```
 
 Arba klonuokite saugyklą ir paleiskite `cargo build --release`. Dvejetainis failas – `target/release/marelle`, apie 4 MiB.
@@ -145,7 +145,7 @@ Nustatymai ateina sluoksniais: įtaisytosios numatytosios reikšmės, tada aplin
 | `network.ca_bundle` | nėra | Papildomas failas su patikimais liudijimų centrais |
 | `network.allow_insecure_http` | `false` | Leisti raktą paprastu `http` į kitą serverį |
 | `update.check` | `true` | Klausti GitHub ir GitLab dėl naujesnės versijos interaktyvios sesijos pradžioje |
-| `update.github_repo` | `cornier-en-branche/marelle` | GitHub `owner/repo`, iš kurio patikrinimas klausia naujausio leidimo |
+| `update.github_repo` | `S-I-L-S/marelle` | GitHub `owner/repo`, iš kurio patikrinimas klausia naujausio leidimo |
 | `update.gitlab_repo` | nėra | GitLab `owner/repo` tam pačiam patikrinimui. Tuščia išjungia GitLab |
 | `update.timeout_secs` | `3` | Kiek sekundžių patikrinimas gali skirti vienam šaltiniui |
 

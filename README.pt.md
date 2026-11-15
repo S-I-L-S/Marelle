@@ -22,12 +22,12 @@ Português · [Română](README.ro.md) · [Русский](README.ru.md) · [Slo
 
 ## Instalação
 
-**Termux no Android.** Baixe um binário pronto da página de [lançamentos](https://github.com/cornier-en-branche/marelle/releases), ou compile no telefone. Guia passo a passo: [docs/TERMUX.md](docs/TERMUX.md).
+**Termux no Android.** Baixe um binário pronto da página de [lançamentos](https://github.com/S-I-L-S/marelle/releases), ou compile no telefone. Guia passo a passo: [docs/TERMUX.md](docs/TERMUX.md).
 
 **Linux e em todo lugar onde o Rust funciona.** Rust 1.85 ou mais novo:
 
 ```sh
-cargo install --locked --git https://github.com/cornier-en-branche/marelle marelle-cli
+cargo install --locked --git https://github.com/S-I-L-S/marelle marelle-cli
 ```
 
 Ou clone o repositório e execute `cargo build --release`. O binário é `target/release/marelle`, cerca de 4 MiB.
@@ -145,7 +145,7 @@ As configurações vêm em camadas: valores padrão integrados, depois variávei
 | `network.ca_bundle` | nenhuma | Um arquivo extra de autoridades de certificação de confiança |
 | `network.allow_insecure_http` | `false` | Permitir uma chave por `http` simples para uma máquina estranha |
 | `update.check` | `true` | Perguntar a GitHub e GitLab por uma versão mais nova ao começo de uma sessão interativa |
-| `update.github_repo` | `cornier-en-branche/marelle` | GitHub `owner/repo` a quem a verificação pede o lançamento mais novo |
+| `update.github_repo` | `S-I-L-S/marelle` | GitHub `owner/repo` a quem a verificação pede o lançamento mais novo |
 | `update.gitlab_repo` | nenhuma | GitLab `owner/repo` para a mesma verificação. Vazio desliga o GitLab |
 | `update.timeout_secs` | `3` | Quantos segundos a verificação pode gastar numa fonte |
 

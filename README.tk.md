@@ -22,12 +22,12 @@
 
 ## Gurmak
 
-**Android-daky Termux.** Taýyn binar faýly [goýumlar](https://github.com/cornier-en-branche/marelle/releases) sahypasından göçürip aliň, ýa-da telefondada ýygaryň. Ädim-ädimden gollanma: [docs/TERMUX.md](docs/TERMUX.md).
+**Android-daky Termux.** Taýyn binar faýly [goýumlar](https://github.com/S-I-L-S/marelle/releases) sahypasından göçürip aliň, ýa-da telefondada ýygaryň. Ädim-ädimden gollanma: [docs/TERMUX.md](docs/TERMUX.md).
 
 **Linux we Rust işleýän äýýer ýerde.** Rust 1.85 ýa-da täze rk gerek:
 
 ```sh
-cargo install --locked --git https://github.com/cornier-en-branche/marelle marelle-cli
+cargo install --locked --git https://github.com/S-I-L-S/marelle marelle-cli
 ```
 
 Ýa-da hansy repozitoriýany klonlaň da, `cargo build --release` işlediň. Binar faýl — `target/release/marelle`, takmyn 4 MiB.
@@ -145,7 +145,7 @@ Sazlamalar gatlaklar bilen gelýär: gurluşykdaky öntümle bahalar, soň üpj�
 | `network.ca_bundle` | ýok | Ynançly sertifikat beriji guramalaryň goşmaça faýly |
 | `network.allow_insecure_http` | `false` | Açaryň adaty `http` arkaly beýleki hosta gitmegine rugsat |
 | `update.check` | `true` | Interaktiw seans başlanda GitHub we GitLab-dan täze wersiýany sormak |
-| `update.github_repo` | `cornier-en-branche/marelle` | Barlag iň soňky goýumy soraýan GitHub `owner/repo` |
+| `update.github_repo` | `S-I-L-S/marelle` | Barlag iň soňky goýumy soraýan GitHub `owner/repo` |
 | `update.gitlab_repo` | ýok | Şol bir barlag üçin GitLab `owner/repo`. Boş bolsa GitLab söndürilir |
 | `update.timeout_secs` | `3` | Barlag bir çeşmä ýana näçe sekunt harjlayar |
 

@@ -22,12 +22,12 @@ Kendi API anahtarlarınızı getirin: Z.ai (Zhipu GLM), Anthropic, OpenAI, OpenR
 
 ## Kurulum
 
-**Android'da Termux.** Hazır ikili dosyayı [sürümler](https://github.com/cornier-en-branche/marelle/releases) sayfasından indirin ya da telefonda derleyin. Adım adım kılavuz: [docs/TERMUX.md](docs/TERMUX.md).
+**Android'da Termux.** Hazır ikili dosyayı [sürümler](https://github.com/S-I-L-S/marelle/releases) sayfasından indirin ya da telefonda derleyin. Adım adım kılavuz: [docs/TERMUX.md](docs/TERMUX.md).
 
 **Linux ve Rust'un çalıştığı her yer.** Rust 1.85 ya da daha yenisi:
 
 ```sh
-cargo install --locked --git https://github.com/cornier-en-branche/marelle marelle-cli
+cargo install --locked --git https://github.com/S-I-L-S/marelle marelle-cli
 ```
 
 Ya da depoyu klonlayın ve `cargo build --release` komutunu çalıştırın. İkili dosya `target/release/marelle`, yaklaşık 4 MiB.
@@ -145,7 +145,7 @@ Ayarlar katmanlar halinde gelir: yerleşik öntanımlılar, sonra ortam değişk
 | `network.ca_bundle` | yok | Güvenilir sertifika kurumlarının ek bir dosyası |
 | `network.allow_insecure_http` | `false` | Bir anahtarın çıplak `http` üzerinden yabancı bir sunucuya gitmesine izin ver |
 | `update.check` | `true` | Etkileşimli bir oturum başlarken GitHub ve GitLab'a daha yeni bir sürümü sormak |
-| `update.github_repo` | `cornier-en-branche/marelle` | Denetimin en yeni sürümü sorduğu GitHub `owner/repo` |
+| `update.github_repo` | `S-I-L-S/marelle` | Denetimin en yeni sürümü sorduğu GitHub `owner/repo` |
 | `update.gitlab_repo` | yok | Aynı denetim için GitLab `owner/repo`. Boşsa GitLab kapatılır |
 | `update.timeout_secs` | `3` | Denetimin tek bir kaynağa harcayabileceği saniye sayısı |
 
