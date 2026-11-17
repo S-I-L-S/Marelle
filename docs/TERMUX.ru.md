@@ -22,12 +22,12 @@ uname -m
 
 `aarch64` почти у всех телефонов последних лет. `armv7l` и `armv8l` означают 32-битную систему. Подходящие имена архивов: `aarch64-linux-android` и `armv7-linux-androideabi`. Для `x86_64` (эмулятор или Chromebook) собирайте на устройстве, как описано в следующем разделе.
 
-Затем скачайте, проверьте и установите. Свежую версию берите на [странице релизов](https://github.com/cornier-en-branche/marelle/releases).
+Затем скачайте, проверьте и установите. Свежую версию берите на [странице релизов](https://github.com/S-I-L-S/marelle/releases).
 
 ```sh
 VERSION=v0.1.0-alpha.1
 ARCH=aarch64-linux-android        # или armv7-linux-androideabi
-BASE=https://github.com/cornier-en-branche/marelle/releases/download/$VERSION
+BASE=https://github.com/S-I-L-S/marelle/releases/download/$VERSION
 
 cd ~
 curl -fLO "$BASE/marelle-$VERSION-$ARCH.tar.gz"
@@ -48,7 +48,7 @@ marelle version
 pkg update && pkg upgrade
 pkg install rust git
 termux-wake-lock
-cargo install --locked --root "$PREFIX" --git https://github.com/cornier-en-branche/marelle marelle-cli
+cargo install --locked --root "$PREFIX" --git https://github.com/S-I-L-S/marelle marelle-cli
 marelle version
 ```
 
@@ -59,7 +59,7 @@ marelle version
 
   ```sh
   CARGO_BUILD_JOBS=1 CARGO_PROFILE_RELEASE_LTO=off \
-    cargo install --locked --root "$PREFIX" --git https://github.com/cornier-en-branche/marelle marelle-cli
+    cargo install --locked --root "$PREFIX" --git https://github.com/S-I-L-S/marelle marelle-cli
   ```
 
 Если сборка обрывается с `[Process completed (signal 9)]`, смотрите раздел «Если что-то не работает» ниже.

@@ -2,7 +2,7 @@
 
 GitHub remains the canonical development repository for now:
 
-- Source: https://github.com/cornier-en-branche/marelle
+- Source: https://github.com/S-I-L-S/marelle
 - Active development branch: `feature/native-terminal-ui`
 
 The repository includes a `.gitlab-ci.yml` pipeline so a GitLab copy can run the same core Rust checks. The pipeline runs formatting, Clippy, the workspace test suite, the Rust 1.85 minimum-supported-version check, and a release build. Android/Termux cross-builds remain covered by GitHub Actions because they require the Android NDK setup already maintained in `.github/workflows/ci.yml`.
@@ -13,7 +13,7 @@ A GitLab project must exist before repository mirroring can be configured. Do no
 
 1. Create an empty GitLab project named `marelle` under the intended namespace. Do not initialize it with a README, license, or other files.
 2. Open **Settings → Repository → Mirroring repositories**.
-3. Add `https://github.com/cornier-en-branche/marelle.git` as the mirror URL.
+3. Add `https://github.com/S-I-L-S/marelle.git` as the mirror URL.
 4. Select **Pull** as the direction and configure authentication if the GitHub repository is private.
 5. Trigger an update and verify that `main` and `feature/native-terminal-ui` appear.
 6. Open **Build → Pipelines** and confirm the pipeline passes on the mirrored branch.
