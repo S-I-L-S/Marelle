@@ -20,6 +20,8 @@ marelle-providers.workspace = true
 reqwest.workspace = true
 serde_json.workspace = true
 tokio.workspace = true
+unicode-segmentation.workspace = true
+unicode-width.workspace = true
 
 [dev-dependencies]
 marelle-testkit.workspace = true

@@ -12,6 +12,7 @@ mod inspect;
 mod messages;
 mod schema;
 mod settings;
+mod text;
 mod theme;
 mod tools;
 mod tui;

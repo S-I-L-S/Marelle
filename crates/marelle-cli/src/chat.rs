@@ -2218,15 +2218,10 @@ fn repl_line(
     }
 }
 
-/// Shortens `text` to `room` characters, ending it with a single ellipsis.
+/// Shortens `text` to `room` terminal cells, ending it with a single ellipsis.
 fn shorten(text: &str, room: usize) -> String {
     let flat = text.split_whitespace().collect::<Vec<_>>().join(" ");
-    if flat.chars().count() <= room {
-        return flat;
-    }
-    let mut out: String = flat.chars().take(room.saturating_sub(1)).collect();
-    out.push('…');
-    out
+    crate::text::ellipsize(&flat, room)
 }
 
 /// Splits `/name rest`. A line that starts with a path, such as

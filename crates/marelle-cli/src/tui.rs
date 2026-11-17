@@ -23,6 +23,7 @@ use crossterm::terminal::{self, Clear, ClearType, EnterAlternateScreen, LeaveAlt
 use marelle_core::{Message, Role};
 
 use crate::VERSION;
+use crate::text::{Layout, chars_within, fit, next_boundary, previous_boundary, width as cells};
 use crate::theme::{Role as ThemeRole, Theme};
 
 const MAX_INPUT_CHARS: usize = 32 * 1024;
@@ -452,8 +453,8 @@ impl Tui {
             }
             KeyCode::Backspace => self.backspace(),
             KeyCode::Delete => self.delete(),
-            KeyCode::Left => self.cursor = self.cursor.saturating_sub(1),
-            KeyCode::Right => self.cursor = (self.cursor + 1).min(self.input.chars().count()),
+            KeyCode::Left => self.cursor = previous_boundary(&self.input, self.cursor),
+            KeyCode::Right => self.cursor = next_boundary(&self.input, self.cursor),
             KeyCode::Home => self.cursor = self.line_start(self.cursor),
             KeyCode::End => self.cursor = self.line_end(self.cursor),
             KeyCode::Up => {
@@ -519,13 +520,15 @@ impl Tui {
         self.reset_history_navigation();
     }
 
+    /// Deletes the whole grapheme cluster after the cursor: a letter goes
+    /// together with its marks.
     fn delete(&mut self) {
-        let count = self.input.chars().count();
-        if self.cursor >= count {
+        let after = next_boundary(&self.input, self.cursor);
+        if after <= self.cursor {
             return;
         }
         let start = byte_index(&self.input, self.cursor);
-        let end = byte_index(&self.input, self.cursor + 1);
+        let end = byte_index(&self.input, after);
         self.input.replace_range(start..end, "");
         self.reset_history_navigation();
     }
@@ -579,7 +582,13 @@ impl Tui {
             .iter()
             .rposition(|start| *start <= self.cursor)
             .unwrap_or(0);
-        let column = self.cursor.saturating_sub(starts[current_line]);
+        // The column is counted in terminal cells, so moving between a line of
+        // ideographs and a line of Latin letters keeps the cursor under the
+        // same place on the screen.
+        let before: String = chars[starts[current_line]..self.cursor.max(starts[current_line])]
+            .iter()
+            .collect();
+        let column = cells(&before);
         let target = if direction < 0 {
             current_line.saturating_sub(1)
         } else {
@@ -590,7 +599,8 @@ impl Tui {
             .iter()
             .position(|character| *character == '\n')
             .map_or(chars.len(), |offset| target_start + offset);
-        self.cursor = (target_start + column).min(target_end);
+        let target_line: String = chars[target_start..target_end].iter().collect();
+        self.cursor = target_start + chars_within(&target_line, column);
     }
 
     fn history_up(&mut self) {
@@ -667,11 +677,13 @@ impl Tui {
         let width = usize::from(columns.max(1));
         let height = usize::from(rows.max(1));
         let input_width = width.saturating_sub(4).max(1);
-        let mut input_lines = wrap(&self.input, input_width);
+        let layout = Layout::new(&self.input, input_width);
+        let cursor_spot = layout.spot(self.cursor);
+        let mut input_lines = layout.into_lines();
         if input_lines.is_empty() {
             input_lines.push(String::new());
         }
-        let cursor_line = cursor_line_column(&self.input, self.cursor, input_width).0;
+        let cursor_line = cursor_spot.0;
         let max_input_lines = height.saturating_sub(7).clamp(1, 4);
         let shown_input_lines = input_lines.len().min(max_input_lines);
         let input_scroll = cursor_line.saturating_sub(shown_input_lines.saturating_sub(1));
@@ -772,8 +784,7 @@ impl Tui {
             width,
         )?;
 
-        let (mut cursor_row, mut cursor_column) =
-            cursor_line_column(&self.input, self.cursor, input_width);
+        let (mut cursor_row, mut cursor_column) = cursor_spot;
         cursor_row = cursor_row.saturating_sub(input_scroll);
         cursor_row = cursor_row.min(shown_input_lines.saturating_sub(1));
         cursor_column = cursor_column.min(input_width.saturating_sub(1));
@@ -848,99 +859,8 @@ fn byte_index(text: &str, character_index: usize) -> usize {
         .map_or(text.len(), |(byte, _)| byte)
 }
 
-fn wrap(text: &str, width: usize) -> Vec<String> {
-    let width = width.max(1);
-    let mut lines = Vec::new();
-    let mut current = String::new();
-    let mut count = 0usize;
-    let mut wrapped_at_boundary = false;
-    let mut trailing_newline_after_wrap = false;
-    for character in text.chars() {
-        if character == '\n' {
-            let was_wrapped = wrapped_at_boundary;
-            if !was_wrapped || !current.is_empty() {
-                lines.push(std::mem::take(&mut current));
-            }
-            count = 0;
-            wrapped_at_boundary = false;
-            trailing_newline_after_wrap = was_wrapped;
-            continue;
-        }
-        trailing_newline_after_wrap = false;
-        // Never let model output or configuration text inject terminal
-        // control sequences into the UI. Tabs are rendered as spaces.
-        if character == '\t' {
-            wrapped_at_boundary = false;
-            for _ in 0..4 {
-                current.push(' ');
-                count += 1;
-                if count >= width {
-                    lines.push(std::mem::take(&mut current));
-                    count = 0;
-                    wrapped_at_boundary = true;
-                }
-            }
-            continue;
-        }
-        wrapped_at_boundary = false;
-        let safe = if character.is_control() {
-            '�'
-        } else {
-            character
-        };
-        current.push(safe);
-        count += 1;
-        if count >= width {
-            lines.push(std::mem::take(&mut current));
-            count = 0;
-            wrapped_at_boundary = true;
-        }
-    }
-    if !current.is_empty()
-        || lines.is_empty()
-        || (text.ends_with('\n') && !trailing_newline_after_wrap)
-    {
-        lines.push(current);
-    }
-    lines
-}
-
-fn fit(text: &str, width: usize) -> String {
-    let mut output: String = text
-        .chars()
-        .map(|character| {
-            if character.is_control() {
-                '�'
-            } else {
-                character
-            }
-        })
-        .take(width)
-        .collect();
-    let count = output.chars().count();
-    if count < width {
-        output.push_str(&" ".repeat(width - count));
-    }
-    output
-}
-
-fn cursor_line_column(text: &str, cursor: usize, width: usize) -> (usize, usize) {
-    let width = width.max(1);
-    let mut line = 0usize;
-    let mut column = 0usize;
-    for character in text.chars().take(cursor) {
-        if character == '\n' {
-            line += 1;
-            column = 0;
-        } else {
-            column += 1;
-            if column >= width {
-                line += 1;
-                column = 0;
-            }
-        }
-    }
-    (line, column)
+fn wrap(text: &str, columns: usize) -> Vec<String> {
+    Layout::new(text, columns).into_lines()
 }
 
 fn command_hint(input: &str) -> String {
@@ -987,31 +907,12 @@ mod tests {
 
     #[test]
     fn editor_byte_offsets_are_unicode_safe() {
-        let text = "aЖ🙂z";
+        let text = "a\u{416}\u{1D11E}z";
         assert_eq!(byte_index(text, 0), 0);
         assert_eq!(byte_index(text, 1), 1);
         assert_eq!(byte_index(text, 2), 3);
         assert_eq!(byte_index(text, 3), 7);
         assert_eq!(byte_index(text, 4), text.len());
-    }
-
-    #[test]
-    fn wrapping_preserves_newlines_and_long_words() {
-        assert_eq!(
-            wrap("alpha beta\nsecond", 5),
-            ["alpha", " beta", "secon", "d"]
-        );
-        assert_eq!(wrap("", 10), [""]);
-        assert_eq!(wrap("one\n", 10), ["one", ""]);
-        assert_eq!(wrap("abcde\n", 5), ["abcde"]);
-        assert_eq!(wrap("abcde\n\n", 5), ["abcde", "", ""]);
-    }
-
-    #[test]
-    fn cursor_tracks_multiline_and_wrapped_input() {
-        assert_eq!(cursor_line_column("abcd", 4, 4), (1, 0));
-        assert_eq!(cursor_line_column("ab\ncd", 3, 4), (1, 0));
-        assert_eq!(cursor_line_column("abcdef", 5, 4), (1, 1));
     }
 
     #[test]
@@ -1051,10 +952,10 @@ mod tests {
     #[test]
     fn editor_mutations_preserve_unicode_boundaries() {
         let mut tui = editor();
-        tui.insert_text("aЖ🙂z");
+        tui.insert_text("a\u{416}\u{1D11E}z");
         tui.cursor = 2;
         tui.backspace();
-        assert_eq!(tui.input, "a🙂z");
+        assert_eq!(tui.input, "a\u{1D11E}z");
         assert_eq!(tui.cursor, 1);
 
         tui.delete();
