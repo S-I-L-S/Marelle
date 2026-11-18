@@ -1,0 +1,66 @@
+name: Mirror to GitLab
+
+# GitHub is canonical. This workflow copies every branch and tag to a GitLab
+# project so .gitlab-ci.yml runs on the same history. GitLab pull mirroring is a
+# Premium feature, so on the Free tier the push has to start from this side.
+#
+# The job stays off until both of these exist:
+#   variable GITLAB_PROJECT   namespace/project on gitlab.com
+#   secret   GITLAB_TOKEN     access token with the write_repository scope
+# Without them it ends with a notice and the run stays green.
+#
+# The GitLab project is a read-only copy: every ref is force-updated and refs
+# that no longer exist on GitHub are pruned. See docs/GITLAB.md.
+
+on:
+  push:
+    branches: ["**"]
+    tags: ["v*"]
+  delete:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: mirror-gitlab
+  cancel-in-progress: false
+
+# Third-party actions are pinned to a commit. The comment names the release.
+jobs:
+  mirror:
+    name: Push branches and tags to GitLab
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Check configuration
+        id: config
+        env:
+          GITLAB_PROJECT: ${{ vars.GITLAB_PROJECT }}
+          GITLAB_TOKEN: ${{ secrets.GITLAB_TOKEN }}
+        run: |
+          if [ -n "$GITLAB_PROJECT" ] && [ -n "$GITLAB_TOKEN" ]; then
+            echo "enabled=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "enabled=false" >> "$GITHUB_OUTPUT"
+            echo "::notice::GitLab mirroring is off. Set the GITLAB_PROJECT variable and the GITLAB_TOKEN secret to turn it on."
+          fi
+
+      - uses: actions/checkout@9f698171ed81b15d1823a05fc7211befd50c8ae0 # v6.0.3
+        if: steps.config.outputs.enabled == 'true'
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Push every branch and tag
+        if: steps.config.outputs.enabled == 'true'
+        env:
+          GITLAB_PROJECT: ${{ vars.GITLAB_PROJECT }}
+          GITLAB_TOKEN: ${{ secrets.GITLAB_TOKEN }}
+        run: |
+          set -euo pipefail
+          # origin/HEAD is a symbolic ref, not a branch, so it must not be mirrored.
+          git remote set-head origin --delete || true
+          git push --prune "https://oauth2:${GITLAB_TOKEN}@gitlab.com/${GITLAB_PROJECT}.git" \
+            "+refs/remotes/origin/*:refs/heads/*" \
+            "+refs/tags/*:refs/tags/*"
