@@ -21,6 +21,7 @@ use crossterm::style::Print;
 use crossterm::terminal::{self, Clear, ClearType, EnterAlternateScreen, LeaveAlternateScreen};
 
 use marelle_core::{Message, Role};
+use marelle_i18n::{Locale, tr, tr_with};
 
 use crate::VERSION;
 use crate::text::{Layout, chars_within, fit, next_boundary, previous_boundary, width as cells};
@@ -63,6 +64,7 @@ pub(crate) struct Tui {
     output: Stdout,
     theme: Theme,
     color: bool,
+    locale: Locale,
     session_name: String,
     provider: String,
     model: String,
@@ -87,6 +89,7 @@ impl Tui {
         provider: String,
         model: String,
         color: bool,
+        locale: Locale,
     ) -> io::Result<Self> {
         // Crossterm falls back to /dev/tty when standard input is not a
         // terminal, which would take over the screen of whoever started a
@@ -115,10 +118,11 @@ impl Tui {
             output,
             theme,
             color,
+            locale,
             session_name: "Chat 1".to_owned(),
             provider,
             model,
-            status: "Ready".to_owned(),
+            status: tr(locale, "tui.ready"),
             input: String::new(),
             cursor: 0,
             history: VecDeque::new(),
@@ -250,12 +254,8 @@ impl Tui {
         let scroll = selected.saturating_sub(visible.saturating_sub(1));
         queue!(self.output, Hide, MoveTo(0, 0), Clear(ClearType::All))?;
         self.draw_line(0, &format!("╭─ {title}"), ThemeRole::Banner, width)?;
-        self.draw_line(
-            1,
-            "│ ↑↓ or wheel navigate · click to focus · Enter select · Esc cancel",
-            ThemeRole::Dim,
-            width,
-        )?;
+        let keys = format!("│ {}", tr(self.locale, "tui.select.keys"));
+        self.draw_line(1, &keys, ThemeRole::Dim, width)?;
         self.draw_line(
             2,
             &format!("├{}┤", "─".repeat(width.saturating_sub(2))),
@@ -286,9 +286,10 @@ impl Tui {
             )?;
         }
 
-        let footer = format!(
-            "{} item(s)  ·  Esc returns to the conversation",
-            items.len()
+        let footer = tr_with(
+            self.locale,
+            "tui.select.footer",
+            &[("count", &items.len().to_string())],
         );
         self.draw_line(height.saturating_sub(2), &footer, ThemeRole::Dim, width)?;
         self.output.flush()
@@ -334,7 +335,7 @@ impl Tui {
     pub(crate) fn start_answer(&mut self) -> io::Result<()> {
         self.push_message(MessageKind::Assistant, String::new());
         self.scroll = 0;
-        self.status = "Generating…".to_owned();
+        self.status = tr(self.locale, "tui.generating");
         self.render()
     }
 
@@ -691,11 +692,13 @@ impl Tui {
         let content_height = input_top.saturating_sub(3);
 
         let mut transcript: Vec<(String, ThemeRole)> = Vec::new();
+        let you = tr(self.locale, "tui.you");
+        let info = tr(self.locale, "tui.info");
         for message in &self.messages {
             let (label, label_role, body_role) = match message.kind {
-                MessageKind::User => ("YOU", ThemeRole::Primary, ThemeRole::Text),
+                MessageKind::User => (you.as_str(), ThemeRole::Primary, ThemeRole::Text),
                 MessageKind::Assistant => ("MARELLE", ThemeRole::Accent, ThemeRole::Text),
-                MessageKind::Notice => ("INFO", ThemeRole::Secondary, ThemeRole::Dim),
+                MessageKind::Notice => (info.as_str(), ThemeRole::Secondary, ThemeRole::Dim),
             };
             transcript.push((format!("  {label}"), label_role));
             for line in wrap(&message.text, input_width) {
@@ -705,7 +708,7 @@ impl Tui {
         }
         if transcript.is_empty() {
             transcript.push((
-                "  Start a conversation by typing below.".to_owned(),
+                format!("  {}", tr(self.locale, "tui.empty")),
                 ThemeRole::Dim,
             ));
         }
@@ -743,12 +746,13 @@ impl Tui {
             }
         }
 
+        // The rule fills what the title leaves, measured in cells so that a
+        // title in any script keeps the line to the width of the screen.
+        let title = format!("╭─ {} ", tr(self.locale, "tui.input"));
+        let rule = "─".repeat(width.saturating_sub(cells(&title) + 2).max(1));
         self.draw_line(
             input_top,
-            &format!(
-                "╭─ Message {} ",
-                "─".repeat(width.saturating_sub(13).max(1))
-            ),
+            &format!("{title}{rule} "),
             ThemeRole::Border,
             width,
         )?;
@@ -772,10 +776,9 @@ impl Tui {
 
         let hint = command_hint(&self.input);
         let footer = if hint.is_empty() {
-            "Enter send · Shift+Enter newline · ↑↓ history · PgUp/PgDn scroll · Ctrl+P palette · Ctrl+C quit"
-                .to_owned()
+            tr(self.locale, "tui.footer")
         } else {
-            format!("{hint}  ·  Enter send · Shift+Enter newline")
+            format!("{hint}  ·  {}", tr(self.locale, "tui.footer.hinted"))
         };
         self.draw_line(
             input_top + 2 + shown_input_lines,
@@ -934,6 +937,7 @@ mod tests {
             output: stdout(),
             theme: Theme::default(),
             color: false,
+            locale: Locale::En,
             provider: "zai".to_owned(),
             session_name: "Chat 1".to_owned(),
             model: "glm-4.7-flash".to_owned(),

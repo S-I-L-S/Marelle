@@ -811,16 +811,20 @@ pub(crate) fn run(
     ) {
         Ok(restored) => restored,
         Err(error) => {
-            writeln!(io.err, "Marelle: cannot load saved sessions: {error}")?;
+            writeln!(
+                io.err,
+                "{}",
+                tr_with(
+                    locale,
+                    "session.error.load",
+                    &[("error", &error.to_string())]
+                )
+            )?;
             return Ok(2);
         }
     };
     if args.continue_session && !restored {
-        return Failure::usage(
-            "No saved Marelle session was found. Start a chat first, or run marelle chat."
-                .to_owned(),
-        )
-        .print(io.err);
+        return Failure::usage(tr(locale, "session.none")).print(io.err);
     }
     match prompt {
         Some(prompt) => {
@@ -1151,7 +1155,15 @@ fn single_turn(
                                 &[("name", &call.name), ("detail", &detail)],
                             ));
                         } else {
-                            writeln!(io.err, "\n[Marelle tool] {} {detail}", call.name)?;
+                            writeln!(
+                                io.err,
+                                "\n{}",
+                                tr_with(
+                                    locale,
+                                    "tool.notice.call",
+                                    &[("name", &call.name), ("detail", &detail)],
+                                )
+                            )?;
                         }
                         let mut approve = |ask: &ToolAsk| -> io::Result<ToolDecision> {
                             if session_allowed.contains(&ask.category) {
@@ -1188,8 +1200,10 @@ fn single_turn(
                             } else if interactive {
                                 writeln!(
                                     io.err,
-                                    "{}:\n{}\n[y] once  [a] always this session  [N] deny",
-                                    ask.label, ask.detail
+                                    "{}:\n{}\n{}",
+                                    ask.label,
+                                    ask.detail,
+                                    tr(locale, "tool.confirm.line.keys")
                                 )?;
                                 io.err.flush()?;
                                 let mut answer = String::new();
@@ -1677,7 +1691,7 @@ fn repl(
             |target| target.provider_name.clone(),
         );
         let model = conversation.display_model(plan);
-        if let Ok(mut tui) = Tui::enter(plan.ui.theme.clone(), provider, model, io.color) {
+        if let Ok(mut tui) = Tui::enter(plan.ui.theme.clone(), provider, model, io.color, locale) {
             if let Some(updates) = updates {
                 tui.set_update_poll(Box::new(move || {
                     updates.try_recv().ok().map(|notice| {
@@ -1719,7 +1733,8 @@ fn repl_tui(
         match tui.next_action()? {
             InputAction::Continue => {}
             InputAction::OpenPalette => {
-                if let Some(command) = tui.select("Command palette", &command_palette_items())? {
+                let title = tr(locale, "tui.select.palette");
+                if let Some(command) = tui.select(&title, &command_palette_items(locale))? {
                     tui.set_input(format!("/{command} "))?;
                 }
             }
@@ -1751,20 +1766,20 @@ fn repl_tui(
                             ))?,
                         }
                     }
-                    let items = model_selector_items(plan, &conversation, &discovered);
-                    match tui.select("Choose a model", &items)? {
+                    let items = model_selector_items(plan, &conversation, &discovered, locale);
+                    match tui.select(&tr(locale, "tui.select.model"), &items)? {
                         Some(value) => format!("/model {value}"),
                         None => continue,
                     }
                 } else if provider_picker {
-                    let items = provider_selector_items(plan, &conversation);
-                    match tui.select("Choose a provider", &items)? {
+                    let items = provider_selector_items(plan, &conversation, locale);
+                    match tui.select(&tr(locale, "tui.select.provider"), &items)? {
                         Some(value) => format!("/provider {value}"),
                         None => continue,
                     }
                 } else if session_picker {
-                    let items = session_selector_items(&conversation);
-                    match tui.select("Switch conversation", &items)? {
+                    let items = session_selector_items(&conversation, locale);
+                    match tui.select(&tr(locale, "tui.select.session"), &items)? {
                         Some(value) => format!("/session {value}"),
                         None => continue,
                     }
@@ -1804,7 +1819,7 @@ fn repl_tui(
                     let (provider, model) = tui_model_labels(plan, &conversation, locale);
                     tui.set_model(provider, model)?;
                     tui.push_notice(String::from_utf8_lossy(&status_output).trim().to_owned())?;
-                    tui.set_status("Ready")?;
+                    tui.set_status(tr(locale, "tui.ready"))?;
 
                     persist_session_store(env_vars, &plan.config, &conversation)?;
                     if let Flow::Exit = flow {
@@ -1841,11 +1856,14 @@ fn repl_tui(
                 tui.append_answer(&answer_output)?;
                 tui.finish_answer()?;
                 tui.push_notice(String::from_utf8_lossy(&status_output).trim().to_owned())?;
-                tui.set_status(if result == OK {
-                    "Ready"
-                } else {
-                    "Request finished with an error"
-                })?;
+                tui.set_status(tr(
+                    locale,
+                    if result == OK {
+                        "tui.ready"
+                    } else {
+                        "tui.failed"
+                    },
+                ))?;
                 persist_session_store(env_vars, &plan.config, &conversation)?;
 
                 let (provider, model) = tui_model_labels(plan, &conversation, locale);
@@ -1855,69 +1873,38 @@ fn repl_tui(
     }
 }
 
-fn command_palette_items() -> Vec<SelectorItem> {
-    [
-        ("model", "Choose model", "Switch the active model"),
-        (
-            "provider",
-            "Choose provider",
-            "Switch the provider for bare model names",
-        ),
-        (
-            "compare",
-            "Compare models",
-            "Set or inspect parallel model comparison",
-        ),
-        (
-            "fallback",
-            "Fallback chain",
-            "Set or inspect fallback models",
-        ),
-        (
-            "judge",
-            "Judge model",
-            "Choose a model to combine comparison results",
-        ),
-        (
-            "system",
-            "System prompt",
-            "Set, inspect, or disable the system prompt",
-        ),
-        (
-            "session",
-            "Switch conversation",
-            "Return to an in-memory conversation",
-        ),
-        (
-            "session new",
-            "New conversation",
-            "Create a fresh in-memory conversation",
-        ),
-        (
-            "clear",
-            "Clear conversation",
-            "Remove messages from the current conversation",
-        ),
-        (
-            "tools",
-            "Available tools",
-            "Show the built-in local agent tools",
-        ),
-        (
-            "skills",
-            "Local skills",
-            "List available local skill instructions",
-        ),
-        ("help", "Help", "Show available chat commands"),
-        ("exit", "Exit", "Leave the interactive session"),
-    ]
-    .into_iter()
-    .map(|(value, label, detail)| SelectorItem {
-        value: value.to_owned(),
-        label: label.to_owned(),
-        detail: detail.to_owned(),
-    })
-    .collect()
+/// What the command palette offers: the text that is sent, then the catalog
+/// keys of the label and of the one-line detail. The keys are spelled out so
+/// that they can be found by searching for them.
+const PALETTE: [(&str, &str, &str); 13] = [
+    ("model", "palette.model", "palette.model.detail"),
+    ("provider", "palette.provider", "palette.provider.detail"),
+    ("compare", "palette.compare", "palette.compare.detail"),
+    ("fallback", "palette.fallback", "palette.fallback.detail"),
+    ("judge", "palette.judge", "palette.judge.detail"),
+    ("system", "palette.system", "palette.system.detail"),
+    ("session", "palette.session", "palette.session.detail"),
+    (
+        "session new",
+        "palette.session_new",
+        "palette.session_new.detail",
+    ),
+    ("clear", "palette.clear", "palette.clear.detail"),
+    ("tools", "palette.tools", "palette.tools.detail"),
+    ("skills", "palette.skills", "palette.skills.detail"),
+    ("help", "palette.help", "palette.help.detail"),
+    ("exit", "palette.exit", "palette.exit.detail"),
+];
+
+fn command_palette_items(locale: Locale) -> Vec<SelectorItem> {
+    PALETTE
+        .into_iter()
+        .map(|(value, label, detail)| SelectorItem {
+            value: value.to_owned(),
+            label: tr(locale, label),
+            detail: tr(locale, detail),
+        })
+        .collect()
 }
 
 /// Queries the active provider's standard model catalogue. Discovery is
@@ -1949,9 +1936,11 @@ fn model_selector_items(
     plan: &Plan,
     conversation: &Conversation,
     discovered: &[String],
+    locale: Locale,
 ) -> Vec<SelectorItem> {
     let mut items = Vec::new();
     let current_provider = effective_provider_name(plan, conversation);
+    let provider_not_set = tr(locale, "tui.item.no_provider");
 
     for model in discovered {
         if items
@@ -1964,9 +1953,8 @@ fn model_selector_items(
             value: model.clone(),
             label: model.clone(),
             detail: current_provider
-                .as_deref()
-                .unwrap_or("discovered model")
-                .to_owned(),
+                .clone()
+                .unwrap_or_else(|| tr(locale, "tui.item.discovered")),
         });
     }
 
@@ -1995,7 +1983,7 @@ fn model_selector_items(
             .map(str::trim)
             .filter(|value| !value.is_empty())
             .or(current_provider.as_deref())
-            .unwrap_or("provider not set");
+            .unwrap_or(provider_not_set.as_str());
         items.push(SelectorItem {
             value: alias_name.to_owned(),
             label: alias_name.to_owned(),
@@ -2009,22 +1997,34 @@ fn model_selector_items(
             0,
             SelectorItem {
                 value: conversation.model.clone(),
-                label: format!("Current: {}", conversation.display_model(plan)),
-                detail: current_provider.map_or_else(
-                    || "current model".to_owned(),
-                    |provider| provider.to_owned(),
+                label: tr_with(
+                    locale,
+                    "tui.item.current_model",
+                    &[("model", &conversation.display_model(plan))],
                 ),
+                detail: current_provider.unwrap_or_else(|| tr(locale, "tui.item.model_current")),
             },
         );
     }
     items
 }
 
-fn session_selector_items(conversation: &Conversation) -> Vec<SelectorItem> {
+fn session_selector_items(conversation: &Conversation, locale: Locale) -> Vec<SelectorItem> {
+    let messages = |count: usize| {
+        tr_with(
+            locale,
+            "tui.item.messages",
+            &[("count", &count.to_string())],
+        )
+    };
     let mut items = vec![SelectorItem {
         value: conversation.session_name.clone(),
-        label: format!("{}  (current)", conversation.session_name),
-        detail: format!("{} messages", conversation.session.len()),
+        label: format!(
+            "{}  {}",
+            conversation.session_name,
+            tr(locale, "tui.item.current")
+        ),
+        detail: messages(conversation.session.len()),
     }];
     items.extend(
         conversation
@@ -2033,14 +2033,20 @@ fn session_selector_items(conversation: &Conversation) -> Vec<SelectorItem> {
             .map(|session| SelectorItem {
                 value: session.name.clone(),
                 label: session.name.clone(),
-                detail: format!("{} messages", session.session.len()),
+                detail: messages(session.session.len()),
             }),
     );
     items
 }
 
-fn provider_selector_items(plan: &Plan, conversation: &Conversation) -> Vec<SelectorItem> {
+fn provider_selector_items(
+    plan: &Plan,
+    conversation: &Conversation,
+    locale: Locale,
+) -> Vec<SelectorItem> {
     let current = effective_provider_name(plan, conversation);
+    let current_mark = tr(locale, "tui.item.current");
+    let custom_endpoint = tr(locale, "tui.item.custom_endpoint");
 
     provider_names(&plan.config)
         .into_iter()
@@ -2052,12 +2058,12 @@ fn provider_selector_items(plan: &Plan, conversation: &Conversation) -> Vec<Sele
             let base_url = plan
                 .config
                 .get(&format!("providers.{name}.base_url"))
-                .unwrap_or("custom endpoint");
+                .unwrap_or(custom_endpoint.as_str());
             let label = if current
                 .as_deref()
                 .is_some_and(|value| normalize_name(value) == name)
             {
-                format!("{name}  (current)")
+                format!("{name}  {current_mark}")
             } else {
                 name.clone()
             };
@@ -2269,7 +2275,7 @@ fn command(
         "exit" | "quit" | "q" => return Ok(Flow::Exit),
         "help" | "?" => say(io, "repl.help", &[])?,
         "tools" => {
-            writeln!(io.err, "Available tools:")?;
+            say(io, "cmd.tools", &[])?;
             for tool in crate::tools::definitions() {
                 writeln!(io.err, "  {:<16} {}", tool.name, tool.description)?;
             }
@@ -2283,30 +2289,38 @@ fn command(
         }
         "provider" if rest.is_empty() => {
             let current = effective_provider_name(plan, conversation)
-                .unwrap_or_else(|| "not selected".to_owned());
-            writeln!(io.err, "Current provider: {current}")?;
+                .unwrap_or_else(|| tr(locale, "cmd.provider.none"));
+            say(io, "cmd.provider.current", &[("name", &current)])?;
         }
         "session" if rest.is_empty() => {
-            writeln!(
-                io.err,
-                "Conversations: {}",
-                conversation.session_names().join(", ")
+            say(
+                io,
+                "cmd.session.list",
+                &[("names", &conversation.session_names().join(", "))],
             )?;
         }
         "session" if rest == "new" => {
             conversation.new_session();
-            writeln!(io.err, "Created {}", conversation.session_name)?;
+            say(
+                io,
+                "cmd.session.created",
+                &[("name", &conversation.session_name)],
+            )?;
         }
         "session" => {
             if conversation.switch_session(rest) {
-                writeln!(io.err, "Switched to {}", conversation.session_name)?;
+                say(
+                    io,
+                    "cmd.session.switched",
+                    &[("name", &conversation.session_name)],
+                )?;
             } else {
-                writeln!(io.err, "No conversation named {rest}")?;
+                say(io, "cmd.session.missing", &[("name", rest)])?;
             }
         }
         "provider" if rest == "off" => {
             conversation.provider_override = None;
-            writeln!(io.err, "Provider override disabled")?;
+            say(io, "cmd.provider.off", &[])?;
         }
         "provider" => {
             let known = provider_names(&plan.config);
@@ -2320,7 +2334,7 @@ fn command(
                         Ok(model) => {
                             conversation.model = model;
                             conversation.provider_override = Some(provider.name.clone());
-                            writeln!(io.err, "Provider set to {}", provider.name)?;
+                            say(io, "cmd.provider.set", &[("name", &provider.name)])?;
                         }
                         Err(error) => {
                             setting_failure(locale, &error).print(io.err)?;
@@ -2601,6 +2615,63 @@ mod tests {
         assert_eq!(conversation.model, "openai/other");
         assert_eq!(conversation.provider_override, None);
         assert!(!conversation.switch_session("missing"));
+    }
+
+    #[test]
+    fn the_palette_speaks_every_language_and_sends_the_same_commands() {
+        let english = command_palette_items(Locale::En);
+        assert_eq!(english.len(), PALETTE.len());
+
+        for locale in Locale::ALL {
+            let code = locale.code();
+            let items = command_palette_items(locale);
+            let sent: Vec<_> = items.iter().map(|item| item.value.as_str()).collect();
+            let reference: Vec<_> = english.iter().map(|item| item.value.as_str()).collect();
+            assert_eq!(
+                sent, reference,
+                "{code}: commands do not depend on language"
+            );
+
+            for (item, original) in items.iter().zip(&english) {
+                for (text, source) in [
+                    (&item.label, &original.label),
+                    (&item.detail, &original.detail),
+                ] {
+                    assert!(
+                        !text.is_empty() && !text.contains("palette."),
+                        "{code}: missing catalog entry for {text:?}"
+                    );
+                    if locale != Locale::En {
+                        assert_ne!(text, source, "{code}: still English: {text:?}");
+                    }
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn selector_rows_are_worded_in_the_chosen_language() {
+        let mut conversation = Conversation {
+            session: Session::new(),
+            session_name: "Chat 1".to_owned(),
+            saved_sessions: Vec::new(),
+            next_session_id: 2,
+            model: "quick".to_owned(),
+            provider_override: None,
+            compare: Vec::new(),
+            fallback: Vec::new(),
+            judge: None,
+            system: SystemChoice::Text("Be precise".to_owned()),
+            tool_allowed: Vec::new(),
+        };
+        conversation.session.push(Message::new(Role::User, "hello"));
+
+        let english = session_selector_items(&conversation, Locale::En);
+        assert_eq!(english[0].label, "Chat 1  (current)");
+
+        let russian = session_selector_items(&conversation, Locale::Ru);
+        assert_eq!(russian[0].label, "Chat 1  (текущий)");
+        assert_eq!(russian[0].detail, "сообщений: 1");
     }
 
     #[test]

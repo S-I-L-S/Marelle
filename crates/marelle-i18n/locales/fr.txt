@@ -180,3 +180,73 @@ tool.label.fetch = Télécharger une page
 tool.notice.call = Outil {name} : {detail}
 tool.notice.result = {name} a renvoyé : {result}
 agent.max_turns.note = Agent arrêté : agent.max_turns ({max}) atteint.
+
+# --- full-screen interface ---
+tui.you = VOUS
+tui.info = INFO
+tui.ready = Prêt
+tui.generating = Génération…
+tui.failed = La requête s'est terminée par une erreur
+tui.empty = Commencez la conversation en écrivant ci-dessous.
+tui.input = Message
+tui.footer = Entrée envoyer · Maj+Entrée nouvelle ligne · ↑↓ historique · PgUp/PgDn défilement · Ctrl+P palette · Ctrl+C quitter
+tui.footer.hinted = Entrée envoyer · Maj+Entrée nouvelle ligne
+tui.select.keys = ↑↓ ou molette - naviguer · clic - cibler · Entrée - choisir · Échap - annuler
+tui.select.footer = Éléments : {count}  ·  Échap revient à la conversation
+tui.select.palette = Palette de commandes
+tui.select.model = Choisir un modèle
+tui.select.provider = Choisir un fournisseur
+tui.select.session = Changer de conversation
+tui.item.current = (en cours)
+tui.item.messages = messages : {count}
+tui.item.current_model = Modèle actuel : {model}
+tui.item.discovered = modèle découvert
+tui.item.no_provider = fournisseur non défini
+tui.item.model_current = modèle actuel
+tui.item.custom_endpoint = point d'accès personnalisé
+
+# --- command palette ---
+palette.model = Choisir le modèle
+palette.model.detail = Changer le modèle actif
+palette.provider = Choisir le fournisseur
+palette.provider.detail = Changer de fournisseur pour les noms de modèle sans préfixe
+palette.compare = Comparer des modèles
+palette.compare.detail = Définir ou consulter la comparaison parallèle de modèles
+palette.fallback = Modèles de repli
+palette.fallback.detail = Définir ou consulter les modèles de repli
+palette.judge = Modèle juge
+palette.judge.detail = Choisir un modèle qui fusionne les résultats de la comparaison
+palette.system = Prompt système
+palette.system.detail = Définir, consulter ou désactiver le prompt système
+palette.session = Changer de conversation
+palette.session.detail = Revenir à une conversation gardée en mémoire
+palette.session_new = Nouvelle conversation
+palette.session_new.detail = Créer une conversation vierge en mémoire
+palette.clear = Effacer la conversation
+palette.clear.detail = Supprimer les messages de la conversation en cours
+palette.tools = Outils disponibles
+palette.tools.detail = Afficher les outils locaux intégrés de l'agent
+palette.skills = Compétences locales
+palette.skills.detail = Lister les instructions de compétences locales disponibles
+palette.help = Aide
+palette.help.detail = Afficher les commandes de chat disponibles
+palette.exit = Quitter
+palette.exit.detail = Quitter la session interactive
+
+# --- slash command replies ---
+cmd.tools = Outils disponibles :
+cmd.provider.current = Fournisseur actuel : {name}
+cmd.provider.none = aucun
+cmd.provider.off = Remplacement du fournisseur désactivé
+cmd.provider.set = Fournisseur défini sur {name}
+cmd.session.list = Conversations : {names}
+cmd.session.created = Conversation {name} créée
+cmd.session.switched = Passage à {name}
+cmd.session.missing = Aucune conversation nommée {name}
+
+# --- saved sessions ---
+session.error.load = Marelle : impossible de charger les sessions enregistrées : {error}
+session.none = Aucune session Marelle enregistrée. Lancez d'abord une conversation, ou exécutez marelle chat.
+
+# --- tool approval in line mode ---
+tool.confirm.line.keys = [y] une fois  [a] toujours pendant cette session  [N] refuser

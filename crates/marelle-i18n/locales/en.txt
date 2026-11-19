@@ -180,3 +180,73 @@ tool.label.fetch = Fetch URL
 tool.notice.call = Tool {name}: {detail}
 tool.notice.result = {name} returned: {result}
 agent.max_turns.note = Agent stopped: reached agent.max_turns ({max}).
+
+# --- full-screen interface ---
+tui.you = YOU
+tui.info = INFO
+tui.ready = Ready
+tui.generating = Generating…
+tui.failed = Request finished with an error
+tui.empty = Start a conversation by typing below.
+tui.input = Message
+tui.footer = Enter send · Shift+Enter newline · ↑↓ history · PgUp/PgDn scroll · Ctrl+P palette · Ctrl+C quit
+tui.footer.hinted = Enter send · Shift+Enter newline
+tui.select.keys = ↑↓ or wheel navigate · click to focus · Enter select · Esc cancel
+tui.select.footer = {count} item(s)  ·  Esc returns to the conversation
+tui.select.palette = Command palette
+tui.select.model = Choose a model
+tui.select.provider = Choose a provider
+tui.select.session = Switch conversation
+tui.item.current = (current)
+tui.item.messages = {count} messages
+tui.item.current_model = Current: {model}
+tui.item.discovered = discovered model
+tui.item.no_provider = provider not set
+tui.item.model_current = current model
+tui.item.custom_endpoint = custom endpoint
+
+# --- command palette ---
+palette.model = Choose model
+palette.model.detail = Switch the active model
+palette.provider = Choose provider
+palette.provider.detail = Switch the provider for bare model names
+palette.compare = Compare models
+palette.compare.detail = Set or inspect parallel model comparison
+palette.fallback = Fallback chain
+palette.fallback.detail = Set or inspect fallback models
+palette.judge = Judge model
+palette.judge.detail = Choose a model to combine comparison results
+palette.system = System prompt
+palette.system.detail = Set, inspect, or disable the system prompt
+palette.session = Switch conversation
+palette.session.detail = Return to an in-memory conversation
+palette.session_new = New conversation
+palette.session_new.detail = Create a fresh in-memory conversation
+palette.clear = Clear conversation
+palette.clear.detail = Remove messages from the current conversation
+palette.tools = Available tools
+palette.tools.detail = Show the built-in local agent tools
+palette.skills = Local skills
+palette.skills.detail = List available local skill instructions
+palette.help = Help
+palette.help.detail = Show available chat commands
+palette.exit = Exit
+palette.exit.detail = Leave the interactive session
+
+# --- slash command replies ---
+cmd.tools = Available tools:
+cmd.provider.current = Current provider: {name}
+cmd.provider.none = not selected
+cmd.provider.off = Provider override disabled
+cmd.provider.set = Provider set to {name}
+cmd.session.list = Conversations: {names}
+cmd.session.created = Created {name}
+cmd.session.switched = Switched to {name}
+cmd.session.missing = No conversation named {name}
+
+# --- saved sessions ---
+session.error.load = Marelle: cannot load saved sessions: {error}
+session.none = No saved Marelle session was found. Start a chat first, or run marelle chat.
+
+# --- tool approval in line mode ---
+tool.confirm.line.keys = [y] once  [a] always this session  [N] deny

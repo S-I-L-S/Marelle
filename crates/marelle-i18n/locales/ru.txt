@@ -180,3 +180,73 @@ tool.label.fetch = Загрузить страницу
 tool.notice.call = Инструмент {name}: {detail}
 tool.notice.result = {name} вернул: {result}
 agent.max_turns.note = Агент остановлен: достигнут agent.max_turns ({max}).
+
+# --- full-screen interface ---
+tui.you = ВЫ
+tui.info = ИНФО
+tui.ready = Готово
+tui.generating = Генерация…
+tui.failed = Запрос завершился с ошибкой
+tui.empty = Начните разговор: введите сообщение ниже.
+tui.input = Сообщение
+tui.footer = Enter отправить · Shift+Enter новая строка · ↑↓ история · PgUp/PgDn прокрутка · Ctrl+P палитра · Ctrl+C выход
+tui.footer.hinted = Enter отправить · Shift+Enter новая строка
+tui.select.keys = ↑↓ или колесо - навигация · клик - фокус · Enter - выбор · Esc - отмена
+tui.select.footer = Пунктов: {count}  ·  Esc возвращает в разговор
+tui.select.palette = Палитра команд
+tui.select.model = Выберите модель
+tui.select.provider = Выберите провайдера
+tui.select.session = Переключить разговор
+tui.item.current = (текущий)
+tui.item.messages = сообщений: {count}
+tui.item.current_model = Текущая модель: {model}
+tui.item.discovered = найденная модель
+tui.item.no_provider = провайдер не задан
+tui.item.model_current = текущая модель
+tui.item.custom_endpoint = пользовательский адрес
+
+# --- command palette ---
+palette.model = Выбрать модель
+palette.model.detail = Сменить активную модель
+palette.provider = Выбрать провайдера
+palette.provider.detail = Сменить провайдера для имён моделей без префикса
+palette.compare = Сравнить модели
+palette.compare.detail = Задать или посмотреть параллельное сравнение моделей
+palette.fallback = Запасные модели
+palette.fallback.detail = Задать или посмотреть запасные модели
+palette.judge = Модель-судья
+palette.judge.detail = Выбрать модель, которая объединяет результаты сравнения
+palette.system = Системный промпт
+palette.system.detail = Задать, посмотреть или отключить системный промпт
+palette.session = Переключить разговор
+palette.session.detail = Вернуться к разговору, хранящемуся в памяти
+palette.session_new = Новый разговор
+palette.session_new.detail = Создать пустой разговор в памяти
+palette.clear = Очистить разговор
+palette.clear.detail = Удалить сообщения из текущего разговора
+palette.tools = Доступные инструменты
+palette.tools.detail = Показать встроенные локальные инструменты агента
+palette.skills = Локальные навыки
+palette.skills.detail = Показать доступные локальные инструкции навыков
+palette.help = Справка
+palette.help.detail = Показать доступные команды чата
+palette.exit = Выход
+palette.exit.detail = Выйти из интерактивного сеанса
+
+# --- slash command replies ---
+cmd.tools = Доступные инструменты:
+cmd.provider.current = Текущий провайдер: {name}
+cmd.provider.none = не выбран
+cmd.provider.off = Переопределение провайдера отключено
+cmd.provider.set = Провайдер переключён на {name}
+cmd.session.list = Разговоры: {names}
+cmd.session.created = Создан разговор {name}
+cmd.session.switched = Переключено на {name}
+cmd.session.missing = Разговора с именем {name} нет
+
+# --- saved sessions ---
+session.error.load = Marelle: не удалось загрузить сохранённые сеансы: {error}
+session.none = Сохранённых сеансов Marelle не найдено. Сначала начните чат или запустите marelle chat.
+
+# --- tool approval in line mode ---
+tool.confirm.line.keys = [y] один раз  [a] всегда в этом сеансе  [N] запретить
