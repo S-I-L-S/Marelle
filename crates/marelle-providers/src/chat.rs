@@ -8,6 +8,8 @@ use std::ops::ControlFlow;
 use marelle_core::{Message, ToolCall};
 use serde_json::Value;
 
+use crate::retry::Retry;
+
 /// A function the model may call.
 #[derive(Debug, Clone, PartialEq)]
 pub struct ToolDefinition {
@@ -45,10 +47,15 @@ pub enum StreamEvent {
     Text(String),
     /// Part of the model's reasoning, for models that expose it.
     Reasoning(String),
+    /// The provider was busy or unreachable and the request will be sent
+    /// again after a pause. It arrives before the pause, and only while no
+    /// text or reasoning has been delivered, so nothing is ever repeated.
+    Retrying(Retry),
 }
 
 /// The receiver of stream events. Returning [`ControlFlow::Break`] stops the
-/// request early, for example when the output pipe has closed.
+/// request early, for example when the output pipe has closed, or ends the
+/// wait before a retry.
 pub type Sink<'a> = dyn FnMut(StreamEvent) -> ControlFlow<()> + 'a;
 
 /// Token counts reported by the provider. Every field is optional because

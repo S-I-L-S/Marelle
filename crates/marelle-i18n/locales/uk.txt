@@ -97,6 +97,11 @@ ui.model = модель
 ui.compare = порівняння
 ui.system = система
 ui.thinking = чекаю на перший токен...
+retry.notice = {cause}. Повтор через {seconds} с (спроба {attempt} з {attempts}).
+retry.cause.http = Провайдер відповів HTTP {status}
+retry.cause.busy = Провайдер повідомляє, що зайнятий
+retry.cause.network = Збій з'єднання
+retry.cause.timeout = Не вдалося з'єднатися вчасно
 
 # --- таблиця провайдерів ---
 providers.col.name = Провайдер

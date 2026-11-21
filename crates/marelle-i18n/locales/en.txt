@@ -97,6 +97,11 @@ ui.model = model
 ui.compare = comparison
 ui.system = system
 ui.thinking = waiting for the first token...
+retry.notice = {cause}. Trying again in {seconds} s (attempt {attempt} of {attempts}).
+retry.cause.http = The provider answered HTTP {status}
+retry.cause.busy = The provider says it is busy
+retry.cause.network = The connection failed
+retry.cause.timeout = No connection within the time limit
 
 # --- the providers table ---
 providers.col.name = Provider

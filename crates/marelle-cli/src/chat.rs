@@ -18,7 +18,7 @@ use marelle_core::{Message, Role, Session, ToolCall};
 use marelle_i18n::{Locale, tr, tr_with};
 use marelle_providers::{
     ChatOutcome, ChatRequest, Client, FinishReason, NetworkSettings, ProviderConfig, ProviderError,
-    StreamEvent, Usage, normalize_name, provider_names,
+    Retry, RetryCause, StreamEvent, Usage, normalize_name, provider_names,
 };
 use serde_json::{Value, json};
 use tokio::runtime::Runtime;
@@ -1057,7 +1057,8 @@ fn single_turn(
                 },
             };
 
-            if spinner && !any_tool_call {
+            let waiting = spinner && !any_tool_call;
+            if waiting {
                 write!(io.err, "{}", tr(locale, "ui.thinking"))?;
                 io.err.flush()?;
             }
@@ -1068,10 +1069,22 @@ fn single_turn(
             let mut events = Vec::new();
             let result =
                 runtime.block_on(target.client.chat(&request, &mut |event: StreamEvent| {
-                    events.push(event);
+                    match event {
+                        // A pause before a retry is told to the person and not
+                        // kept: `events` is what they would have read, and an
+                        // empty list is what lets a failed model hand over to
+                        // the next one.
+                        StreamEvent::Retrying(retry) => announce_retry(
+                            locale,
+                            &retry,
+                            &mut *io.err,
+                            tui.as_deref_mut(),
+                            waiting,
+                        ),
+                        other => events.push(other),
+                    }
                     ControlFlow::Continue(())
                 }));
-            let waiting = spinner && !any_tool_call;
             let needs_clear = match &result {
                 Err(_) => true,
                 Ok(outcome) => !outcome.tool_calls.is_empty(),
@@ -1436,6 +1449,7 @@ fn compare_turn(
                         plan.chat.show_reasoning,
                     )
                     .with_theme(&plan.ui.theme)
+                    .with_locale(locale)
                     .with_spinner(spinner);
                     let result = runtime.block_on(
                         target
@@ -1533,12 +1547,67 @@ fn usage_line(locale: Locale, usage: &Usage) -> String {
 }
 
 /// Writes the pieces of an answer where they belong, as they arrive.
+/// The sentence that tells the person why the client is waiting.
+fn retry_notice(locale: Locale, retry: &Retry) -> String {
+    let cause = match retry.cause {
+        RetryCause::Http(status) => tr_with(
+            locale,
+            "retry.cause.http",
+            &[("status", &status.to_string())],
+        ),
+        RetryCause::Busy => tr(locale, "retry.cause.busy"),
+        RetryCause::Network => tr(locale, "retry.cause.network"),
+        RetryCause::Timeout => tr(locale, "retry.cause.timeout"),
+    };
+    // Whole seconds, rounded up: "in 1 s" is clearer than "in 0.6 s".
+    let seconds = retry.wait.as_secs_f64().ceil() as u64;
+    tr_with(
+        locale,
+        "retry.notice",
+        &[
+            ("cause", &cause),
+            ("seconds", &seconds.to_string()),
+            ("attempt", &retry.attempt.to_string()),
+            ("attempts", &retry.attempts.to_string()),
+        ],
+    )
+}
+
+/// Tells the person that the provider is being asked again.
+///
+/// The full-screen interface gets a note in its transcript. A line session
+/// gets a line on `err`, written over the waiting note, which is put back
+/// after it. Failing to write a note is not worth failing the request for.
+fn announce_retry(
+    locale: Locale,
+    retry: &Retry,
+    err: &mut dyn Write,
+    tui: Option<&mut Tui>,
+    waiting: bool,
+) {
+    let line = retry_notice(locale, retry);
+    if let Some(ui) = tui {
+        let _ = ui.push_notice(line);
+        return;
+    }
+    if waiting {
+        // The waiting note only exists on a colour terminal.
+        let _ = write!(err, "\r\x1b[2K");
+    }
+    let _ = writeln!(err, "{line}");
+    if waiting {
+        let _ = write!(err, "{}", tr(locale, "ui.thinking"));
+    }
+    let _ = err.flush();
+}
+
 struct Printer<'a> {
     out: &'a mut dyn Write,
     err: &'a mut dyn Write,
     color: bool,
     show_reasoning: bool,
     theme: Theme,
+    locale: Locale,
     /// A "waiting" note is on the current line of `err`.
     spinner: bool,
     /// A block of reasoning is open on `err`.
@@ -1563,6 +1632,7 @@ impl<'a> Printer<'a> {
             color,
             show_reasoning,
             theme: Theme::default(),
+            locale: Locale::En,
             spinner: false,
             reasoning_open: false,
             wrote: false,
@@ -1573,6 +1643,11 @@ impl<'a> Printer<'a> {
 
     fn with_theme(mut self, theme: &Theme) -> Self {
         self.theme = theme.clone();
+        self
+    }
+
+    fn with_locale(mut self, locale: Locale) -> Self {
+        self.locale = locale;
         self
     }
 
@@ -1601,6 +1676,7 @@ impl<'a> Printer<'a> {
             Ok(()) => match event {
                 StreamEvent::Text(piece) => self.text(&piece),
                 StreamEvent::Reasoning(piece) => self.reasoning(&piece),
+                StreamEvent::Retrying(retry) => self.retrying(&retry),
             },
             Err(error) => Err(error),
         };
@@ -1611,6 +1687,13 @@ impl<'a> Printer<'a> {
                 ControlFlow::Break(())
             }
         }
+    }
+
+    /// Says that the provider is being asked again. Nothing else has been
+    /// written yet, because a retry only happens before the first piece.
+    fn retrying(&mut self, retry: &Retry) -> io::Result<()> {
+        writeln!(self.err, "{}", retry_notice(self.locale, retry))?;
+        self.err.flush()
     }
 
     fn reasoning(&mut self, piece: &str) -> io::Result<()> {
@@ -2816,6 +2899,92 @@ mod tests {
             usage_line(Locale::Fr, &usage),
             "jetons : 12 en entrée, 34 en sortie, 5 de raisonnement"
         );
+    }
+
+    fn a_retry(cause: RetryCause) -> Retry {
+        Retry {
+            attempt: 3,
+            attempts: 5,
+            wait: std::time::Duration::from_millis(1_500),
+            cause,
+        }
+    }
+
+    #[test]
+    fn a_retry_is_explained_in_every_language() {
+        for locale in Locale::ALL {
+            for cause in [
+                RetryCause::Http(429),
+                RetryCause::Busy,
+                RetryCause::Network,
+                RetryCause::Timeout,
+            ] {
+                let note = retry_notice(locale, &a_retry(cause));
+                assert!(!note.contains("retry."), "a key leaks: {note} ({locale:?})");
+                assert!(!note.contains('{'), "unfilled: {note} ({locale:?})");
+                // 1.5 s is shown as 2, and both counts appear.
+                assert!(note.contains('2'), "{note}");
+                assert!(note.contains('3') && note.contains('5'), "{note}");
+            }
+            let http = retry_notice(locale, &a_retry(RetryCause::Http(429)));
+            assert!(http.contains("429"), "{http}");
+        }
+    }
+
+    #[test]
+    fn the_wait_is_shown_in_whole_seconds_rounded_up() {
+        let seconds = |millis| {
+            let retry = Retry {
+                wait: std::time::Duration::from_millis(millis),
+                ..a_retry(RetryCause::Busy)
+            };
+            retry_notice(Locale::En, &retry)
+        };
+        assert!(seconds(0).contains("in 0 s"), "{}", seconds(0));
+        assert!(seconds(1).contains("in 1 s"), "{}", seconds(1));
+        assert!(seconds(1_000).contains("in 1 s"));
+        assert!(seconds(1_001).contains("in 2 s"));
+        assert!(seconds(30_000).contains("in 30 s"));
+    }
+
+    #[test]
+    fn a_line_session_shows_the_retry_over_the_waiting_note() {
+        let retry = a_retry(RetryCause::Http(503));
+        let note = retry_notice(Locale::En, &retry);
+
+        let mut waiting = Vec::new();
+        announce_retry(Locale::En, &retry, &mut waiting, None, true);
+        let shown = String::from_utf8(waiting).unwrap();
+        assert!(shown.starts_with("\r\x1b[2K"), "the note is erased first");
+        assert!(shown.contains(&format!("{note}\n")));
+        assert!(
+            shown.ends_with(&tr(Locale::En, "ui.thinking")),
+            "and the waiting note comes back: {shown:?}"
+        );
+
+        let mut plain = Vec::new();
+        announce_retry(Locale::En, &retry, &mut plain, None, false);
+        assert_eq!(String::from_utf8(plain).unwrap(), format!("{note}\n"));
+    }
+
+    #[test]
+    fn the_printer_tells_a_retry_on_standard_error_only() {
+        let (mut out, mut err) = (Vec::new(), Vec::new());
+        {
+            let mut printer =
+                Printer::new(&mut out, &mut err, false, false).with_locale(Locale::Ru);
+            assert!(
+                printer
+                    .event(StreamEvent::Retrying(a_retry(RetryCause::Busy)))
+                    .is_continue()
+            );
+            assert!(printer.event(StreamEvent::Text("ok".into())).is_continue());
+            printer.finish().unwrap();
+        }
+        assert_eq!(String::from_utf8(out).unwrap(), "ok\n");
+        let told = String::from_utf8(err).unwrap();
+        assert!(told.contains("Повтор через 2 с"), "{told}");
+        assert!(told.contains("попытка 3 из 5"), "{told}");
     }
 
     #[test]

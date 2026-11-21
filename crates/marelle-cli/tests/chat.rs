@@ -72,6 +72,13 @@ fn env_for<'a>(server: &'a MockServer, extra: &[(&'a str, &'a str)]) -> Vec<(Str
         ("MOCK_KEY".to_owned(), KEY.to_owned()),
         ("MARELLE_NETWORK__PROXY".to_owned(), "none".to_owned()),
     ];
+    // A test that fails on purpose should fail at once, not after pauses.
+    if !extra
+        .iter()
+        .any(|(name, _)| *name == "MARELLE_NETWORK__MAX_RETRIES")
+    {
+        env.push(("MARELLE_NETWORK__MAX_RETRIES".to_owned(), "0".to_owned()));
+    }
     env.extend(
         extra
             .iter()
@@ -504,6 +511,116 @@ fn a_provider_error_is_reported_without_output() {
     assert_eq!(result.code, 1);
     assert_eq!(result.out, "");
     assert!(result.err.contains("overloaded"), "{}", result.err);
+}
+
+/// A busy provider that asks to be tried again after one millisecond.
+fn busy(code: &str) -> Reply {
+    Reply::json(
+        429,
+        &json!({"error": {"code": code, "message": "overloaded"}}).to_string(),
+    )
+    .with_header("retry-after-ms", "1")
+}
+
+#[test]
+fn a_busy_provider_is_asked_again_and_the_person_is_told() {
+    let server = MockServer::start(vec![busy("1305"), answer(&["recovered"])]);
+    let result = chat(
+        &server,
+        &["chat", "-m", "mock/x", "hi"],
+        &[("MARELLE_NETWORK__MAX_RETRIES", "2")],
+        "",
+        false,
+    );
+    assert_eq!(result.code, 0, "{}", result.err);
+    assert_eq!(
+        result.out, "recovered\n",
+        "the notice is not part of the answer"
+    );
+    assert!(
+        result
+            .err
+            .contains("The provider answered HTTP 429. Trying again in 1 s (attempt 2 of 3)."),
+        "{}",
+        result.err
+    );
+    assert_eq!(server.requests().len(), 2);
+    assert_eq!(
+        server.requests()[0].body,
+        server.requests()[1].body,
+        "the same request is sent again"
+    );
+}
+
+#[test]
+fn the_pause_is_told_in_the_chosen_language() {
+    let server = MockServer::start(vec![busy("1305"), answer(&["ok"])]);
+    let result = chat(
+        &server,
+        &["chat", "-m", "mock/x", "hi"],
+        &[
+            ("MARELLE_NETWORK__MAX_RETRIES", "2"),
+            ("MARELLE_LANG", "ru"),
+        ],
+        "",
+        false,
+    );
+    assert_eq!(result.code, 0, "{}", result.err);
+    assert!(
+        result
+            .err
+            .contains("Провайдер ответил HTTP 429. Повтор через 1 с (попытка 2 из 3)."),
+        "{}",
+        result.err
+    );
+}
+
+#[test]
+fn when_retries_do_not_help_the_provider_error_is_what_the_person_reads() {
+    let server = MockServer::start(vec![busy("1305")]);
+    let result = chat(
+        &server,
+        &["chat", "-m", "mock/x", "hi"],
+        &[("MARELLE_NETWORK__MAX_RETRIES", "2")],
+        "",
+        false,
+    );
+    assert_eq!(result.code, 1);
+    assert_eq!(result.out, "");
+    assert_eq!(server.requests().len(), 3, "the first try and two retries");
+    assert_eq!(result.err.matches("Trying again").count(), 2);
+    assert!(result.err.contains("overloaded"), "{}", result.err);
+    assert!(result.err.contains("HTTP 429"), "{}", result.err);
+}
+
+#[test]
+fn a_spent_quota_is_not_worth_a_retry() {
+    let server = MockServer::start(vec![busy("1308")]);
+    let result = chat(
+        &server,
+        &["chat", "-m", "mock/x", "hi"],
+        &[("MARELLE_NETWORK__MAX_RETRIES", "4")],
+        "",
+        false,
+    );
+    assert_eq!(result.code, 1);
+    assert_eq!(server.requests().len(), 1);
+    assert!(!result.err.contains("Trying again"), "{}", result.err);
+}
+
+#[test]
+fn a_bad_retry_setting_is_a_usage_error_that_names_it() {
+    let server = MockServer::start(vec![answer(&["unused"])]);
+    let result = chat(
+        &server,
+        &["chat", "-m", "mock/x", "hi"],
+        &[("MARELLE_NETWORK__MAX_RETRIES", "lots")],
+        "",
+        false,
+    );
+    assert_eq!(result.code, 2, "{}", result.err);
+    assert!(result.err.contains("network.max_retries"), "{}", result.err);
+    assert!(server.requests().is_empty());
 }
 
 #[test]

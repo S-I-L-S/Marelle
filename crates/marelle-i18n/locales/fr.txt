@@ -97,6 +97,11 @@ ui.model = modèle
 ui.compare = comparaison
 ui.system = système
 ui.thinking = en attente du premier jeton...
+retry.notice = {cause}. Nouvel essai dans {seconds} s (tentative {attempt} sur {attempts}).
+retry.cause.http = Le fournisseur a répondu HTTP {status}
+retry.cause.busy = Le fournisseur indique qu'il est occupé
+retry.cause.network = La connexion a échoué
+retry.cause.timeout = Connexion impossible dans le délai imparti
 
 # --- le tableau des fournisseurs ---
 providers.col.name = Fournisseur
