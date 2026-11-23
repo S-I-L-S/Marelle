@@ -180,7 +180,6 @@ Raționamentul din spatele designului e în [docs/ARCHITECTURE.md](docs/ARCHITEC
 
 - Selectorii de furnizori și modele listează furnizorii configurați și aliasurile de modele. Marelle nu descoperă încă cataloage de modele la distanță.
 - Selectorii susțin clic de mouse pentru focalizare și rostovire cu rotița; transcribul și editorul de intrare rămân conduse din tastatură.
-- Ctrl-C ieșe din sesiunea interactivă. Încă nu anulează doar răspunsul curent.
 - Bucla agentului, instrumentele locale conștiente de permisiuni și sesiunile locale persistente sunt implementate, dar Marelle rămâne un prototip pre-alpha; vezi [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) pentru designul actual și limitele lui.
 
 ## Dezvoltare

@@ -180,7 +180,6 @@ Het nadenken achter het ontwerp staat in [docs/ARCHITECTURE.md](docs/ARCHITECTUR
 
 - Provider- en modelkiezers tonen ingestelde providers en modelaliasnamen. Marelle ontdekt nog geen verre modelkatalogen.
 - Kiezers ondersteunen muisklik voor focus en scrollen met het wieltje; het transcript en de invoereditor blijven toetsenbordgedreven.
-- Ctrl-C verlaat de interactieve sessie. Het onderbreekt nog niet alleen het lopende antwoord.
 - De agents-lus, toestemmingsbewuste lokale tools en blijvende lokale sessies zijn gerealiseerd, maar Marelle blijft een pre-alpha-prototype; voor het huidige ontwerp en de grenzen lees [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
 
 ## Ontwikkeling

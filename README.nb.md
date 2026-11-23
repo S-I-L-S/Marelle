@@ -180,7 +180,6 @@ Tenkningen bak formgivningen ligger i [docs/ARCHITECTURE.md](docs/ARCHITECTURE.m
 
 - Leverandør- og modellvelgere lister satte leverandører og modellaliaser. Marelle oppdager ennå ikke fjerne modellkataloger.
 - Velgere støtter museklikk for fokus og rulling med hjulet; transkriben og inngangsredaktøren forblir tastaturdrevne.
-- Ctrl-C forlater den interaktive økten. Den avbryter ennå ikke bare det løpende svaret.
 - Agentløkka, tilitsmedvetne lokale verktøy og varige lokale økter er gjennomført, men Marelle forblir en pre-alfa-prototype; for den nåværende formgivningen og grensene, les [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
 
 ## Utvikling

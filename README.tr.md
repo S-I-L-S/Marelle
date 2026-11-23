@@ -180,7 +180,6 @@ Tasarımın ardındaki düşünce [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) i
 
 - Sağlayıcı ve model seçicileri atanmış sağlayıcıları ve model lakaplarını sıralar. Marelle henüz uzaktaki model kataloglarını keşfetmez.
 - Seçiciler odak için fare tıklamasını ve tekerlekle kaydırmayı destekler; döküm ve girişte yazı kılavyeyle sürülür.
-- Ctrl-C etkileşimli oturumdan çıkar. Henüz yalnızca geçerli yanıtı kesmez.
 - Ajan döngüsü, izin duyarlı yerel araçlar ve kalıcı yerel oturumlar uygulanmıştır; ama Marelle bir ön-alfa prototipi olarak kalır. Şimdiki tasarım ve sınırlar için [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)'i okuyun.
 
 ## Geliştirme

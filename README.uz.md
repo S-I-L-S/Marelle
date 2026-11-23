@@ -180,7 +180,6 @@ Dizayn ortidagi mulohaza [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)-da.
 
 - Ta'minotchi va model tanlagichlar qo'yilgan ta'minotchilarni va model taxalluslarini sanab o'tadi. Marelle hali masofadagi model kataloglarini ochmaydi.
 - Tanlagichlar fokus uchun sichqoncha bosishini va g'ildirak bilan aylantirishni qo'llaydi; yozuv va kiritish muharriri klaviaturadan boshqariladi.
-- Ctrl-C interaktiv sessiyadan chiqadi. Hali joriy javobni to'xtatmaydi.
 - Agent sikli, ruxsatlardan xabardor mahalliy vositalar va doimiy mahalliy sessiyalar amalga oshirildi; lekin Marelle oldin-alfa prototip bo'lib qoladi. Hozirgi dizayn va chegaralar uchun [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) o'qing.
 
 ## Rivojlantirish

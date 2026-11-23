@@ -180,7 +180,6 @@ Alasan di balik desain ada di [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
 
 - Pemilih provider dan model menampilkan provider terkonfigurasi dan alias model. Marelle belum dapat menemukan katalog model jarak jauh.
 - Pemilih mendukung klik mouse untuk fokus dan pengguliran roda; transkrip dan editor masukan tetap dikendalikan keyboard.
-- Ctrl-C keluar dari sesi interaktif. Ia belum bisa membatalkan hanya respons saat ini.
 - Agent loop, alat lokal yang sadar izin, dan sesi lokal yang bertahan sudah diimplementasikan, tetapi Marelle tetap prototipe pre-alpha; lihat [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) untuk desain dan batas saat ini.
 
 ## Pengembangan

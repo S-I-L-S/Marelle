@@ -180,7 +180,6 @@ Interface English، Russian، French اور Ukrainian بولتا ہے۔ `--lang 
 
 - Provider اور model selectors سیٹ کیے گئے providers اور model aliases دکھاتے ہیں۔ Marelle ابھی remote model catalogs تلاش نہیں کر سکتا۔
 - Selectors ماؤس کے click-to-focus اور wheel scrolling کی سپورٹ رکھتے ہیں؛ transcript اور input editor keyboard سے چلنے والے ہی رہتے ہیں۔
-- Ctrl-C interactive session سے باہر نکال دیتا ہے۔ یہ فی الحال صرف موجودہ response منسوخ نہیں کر سکتا۔
 - Agent loop، permission-aware مقامی tools اور دائمی مقامی sessions نافذ ہیں، مگر Marelle اب بھی ایک pre-alpha prototype ہے؛ موجودہ ڈیزائن اور حدود کے لیے [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) دیکھیں۔
 
 ## ڈیولپمنٹ

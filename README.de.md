@@ -180,7 +180,6 @@ Das Nachdenken hinter dem Entwurf steht in [docs/ARCHITECTURE.md](docs/ARCHITECT
 
 - Anbieter- und Modellauswähler listen eingestellte Anbieter und Modell-Aliasse auf. Marelle entdeckt noch keine fernen Modellkataloge.
 - Auswähler unterstützen Mausklick für Fokus und Rollen mit dem Rad; das Protokoll und der Eingabegeber bleiben tastaturgetrieben.
-- Ctrl-C verlässt die interaktive Sitzung. Es bricht noch nicht nur die laufende Antwort ab.
 - Agentenschleife, bewilligungsbewusste lokale Werkzeuge und beständige lokale Sitzungen sind verwirklicht, aber Marelle bleibt ein Pre-Alpha-Prototyp; für den gegenwärtigen Entwurf und die Grenzen lies [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
 
 ## Entwicklung

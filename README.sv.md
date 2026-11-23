@@ -180,7 +180,6 @@ Resonerandet bakom formgivningen finns i [docs/ARCHITECTURE.md](docs/ARCHITECTUR
 
 - Leverantörs- och modellväljare listar inställda leverantörer och modellalias. Marelle upptäcker ännu inte fjärrmodellkataloger.
 - Väljare stöder musklick för fokus och rullning med hjulet; transkriptet och inmatningsredigeraren förblir tangentbordsdrivna.
-- Ctrl-C lämnar den interaktiva sessionen. Den avbryter ännu inte bara det aktuella svaret.
 - Agentslingan, behörighetsmedvetna lokala verktyg och beständiga lokala sessioner är implementerade, men Marelle förblir en pre-alfa-prototyp; se [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) för nuvarande formgivning och gränser.
 
 ## Utveckling

@@ -180,7 +180,6 @@ Dizaino priežastys – [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
 
 - Tiekėjų ir modelių pasirinkėjai išvardija sukonfigūruotus tiekėjus ir modelių slapyvardžius. Marelle dar neatranda nutolusių modelių katalogų.
 - Pasirinkėjai palaiko pelės spragtelėjimą fokusui ir sukimąsi ritele; nuorašas ir įvesties redaktorius lieka klaviatūros valdomi.
-- Ctrl-C išeina iš interaktyvios sesijos. Dar nutraukia ne tik einantį atsakymą.
 - Agento ciklas, leidimus atsižvelgiantys vietiniai įrankiai ir nuolatinės vietinės sesijos įgyvendintos, bet Marelle lieka iki-alfa prototipu; apie einantį dizainą ir ribas skaitykite [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
 
 ## Plėtra

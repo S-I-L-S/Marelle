@@ -180,7 +180,6 @@ Uvažování stojící za návrhem je v [docs/ARCHITECTURE.md](docs/ARCHITECTURE
 
 - Voliče poskytovatelů a modelů vypisují nastavené poskytovate a aliasy modelů. Marelle zatím neobjevuje vzdálené katalogy modelů.
 - Voliče podporují klik myší pro zaměření a posouvání kolečkem; transkript a editor vstupu zůstávají ovládané klávesnicí.
-- Ctrl-C opouští interaktivní relaci. Zatím neruší jen aktuální odpověď.
 - Smyčka agenta, lokální nástroje vědomé oprávnění a trvalé lokální relace jsou implementovány, ale Marelle zůstává prototypem pre-alpha; o současném návrhu a mezích čtěte [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
 
 ## Vývoj

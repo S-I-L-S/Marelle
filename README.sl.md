@@ -180,7 +180,6 @@ Razmišljanje za zasnovo je v [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
 
 - Izbirniki ponudnikov in modelov izpišejo nastavljene ponudnike in vzdevke modelov. Marelle še ne odkriva oddaljenih katalogov modelov.
 - Izbirniki podpirajo klik z miško za poudarek in kotaljenje z kolescem; prepis in urejevalnik vnosa ostajata vodena s tipkovnice.
-- Ctrl-C zapusti interaktivno sejo. Za zdaj ne prekine le trenutnega odgovora.
 - Zanka agenta, krajevna orodja, ki pozivajo dovoljenja, in trajne krajevne seje so izvedeni, a Marelle ostaja prototip pre-alpha; o sedanji zasnovi in mejah berite [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
 
 ## Razvoj

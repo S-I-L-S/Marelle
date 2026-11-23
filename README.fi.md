@@ -180,7 +180,6 @@ Suunnittelun takainen ajattelu on [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)-s
 
 - Palveluntarjoaja- ja mallivalitsimet luettelevat asetetut palveluntarjoajat ja mallien lempinimet. Marelle ei vielä löydä etänä olevia mallikatalogeja.
 - Valitsimet tukevat hiiren klikkiä kohdistukseen ja rullan vieritystä; transkripti ja syötteen muokkaaja pysyvät näppäimistöllä ajettuina.
-- Ctrl-C poistuu interaktiivisesta istunnosta. Se ei vielä keskeytä vain nykyistä vastausta.
 - Agenttisilmukka, lupatietoiset paikalliset työkalut ja pysyvät paikalliset istunnot on toteutettu, mutta Marelle pysyy esi-alfa prototyyppinä; nykyisestä suunnittelusta ja rajoista lue [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
 
 ## Kehitys

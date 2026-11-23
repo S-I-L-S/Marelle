@@ -180,7 +180,6 @@ Il ragionamento dietro la progettazione è in [docs/ARCHITECTURE.md](docs/ARCHIT
 
 - I selettori di fornitori e modelli elencano i fornitori configurati e i soprannomi di modelli. Marelle non scopre ancora cataloghi di modelli remoti.
 - I selettori sostengono il clic del mouse per il fuoco e lo scorrimento con la rotella; il trascritto e l'editor di entrata restano guidati da tastiera.
-- Ctrl-C esce dalla sessione interattiva. Non interrompe ancora solo la risposta corrente.
 - Il ciclo dell'agente, gli strumenti locali consapevoli dei permessi e le sessioni locali persistenti sono realizzati, ma Marelle resta un prototipo pre-alfa; per la progettazione attuale e i suoi confini leggi [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
 
 ## Sviluppo

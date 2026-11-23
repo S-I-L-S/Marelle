@@ -180,7 +180,6 @@ El razonamiento detrás del diseño está en [docs/ARCHITECTURE.md](docs/ARCHITE
 
 - Los selectores de proveedores y modelos enumeran los proveedores configurados y los alias de modelos. Marelle aún no descubre catálogos de modelos remotos.
 - Los selectores sostienen clic de ratón para el enfoque y desplazamiento con rueda; la transcripción y el editor de entrada siguen mandados desde el teclado.
-- Ctrl-C sale de la sesión interactiva. Todavía no cancela solo la respuesta en curso.
 - El bucle de agente, las herramientas locales conscientes de permisos y las sesiones locales persistentes están implementados, pero Marelle sigue siendo un prototipo pre-alfa; para el diseño actual y sus límites, lee [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
 
 ## Desarrollo

@@ -180,7 +180,6 @@ Alasan di sebalik reka bentuk ada di [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md
 
 - Pemilih provider dan model menyenaraikan provider yang ditetapkan dan alias model. Marelle belum lagi menemui katalog model jarak jauh.
 - Pemilih menyokong klik tetikus untuk fokus dan tatalan roda; transkrip dan editor input kekal dikendalikan papan kekunci.
-- Ctrl-C keluar dari sesi interaktif. Ia belum lagi boleh membatalkan respons semasa sahaja.
 - Agent loop, alatan setempat yang peka kebenaran dan sesi setempat berterusan telah dilaksanakan, tetapi Marelle kekal sebagai prototaip pra-alpha; lihat [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) untuk reka bentuk dan sempadan semasa.
 
 ## Pembangunan
