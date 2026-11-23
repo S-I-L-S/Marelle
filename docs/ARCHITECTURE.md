@@ -67,6 +67,8 @@ Two protocols cover the vendors we know of: OpenAI-compatible endpoints (OpenAI,
 7. **Reach.** Gateways (Telegram first) and scheduled tasks.
 8. **Languages.** Catalogs for every language of Eurasia and then more, with right-to-left support and translated documentation.
 
+The plan beyond these eight steps, with platforms, the polyglot design and the milestones, is in [PLAN.md](PLAN.md). The reasons behind its choices are in [adr/](adr/README.md).
+
 ## References
 
 [Hermes Agent](https://github.com/NousResearch/hermes-agent) (MIT) is the main reference for what a full agent looks like, and the interface takes its look from Hermes's CLI. [OpenCode](https://github.com/sst/opencode) (MIT) is the second reference, for permission patterns and configuration layers. Both are only references: no code from either is included. [NOTICE](../NOTICE) says how code from them, or from any other project, must be recorded if it is ever added.
