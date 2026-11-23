@@ -180,7 +180,7 @@ The reasoning behind the design is in [docs/ARCHITECTURE.md](docs/ARCHITECTURE.m
 
 - The model picker queries the active provider's standard `/models` endpoint when available. Providers that do not expose a compatible catalogue continue to show configured aliases and the current model; discovery is best-effort and does not guarantee that every listed model is enabled for the account.
 - Selectors support mouse click-to-focus and wheel scrolling; the transcript and input editor remain keyboard-driven.
-- Ctrl-C exits the interactive session. It does not yet cancel only the current response.
+- In the full-screen interface, Ctrl-C cancels the answer being generated and quits only when nothing is running. A tool that has already started is not interrupted: the cancel takes effect when it finishes. The line-oriented fallback cannot cancel; there Ctrl-C ends the session.
 - The agent loop, permission-aware local tools and persistent local sessions are implemented, but Marelle remains a pre-alpha prototype; see [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for the current design and boundaries.
 
 ## Development
