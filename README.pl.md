@@ -180,7 +180,6 @@ Rozumowanie stojące za projektem jest w [docs/ARCHITECTURE.md](docs/ARCHITECTUR
 
 - Selektory dostawców i modeli wypisują skonfigurowanych dostawców i aliasy modeli. Marelle nie odkrywa jeszcze zdalnych katalogów modeli.
 - Selektory wspierają kliknięcie myszą dla fokusu i przewijanie kółkiem; transkrypt i edytor wejścia pozostają sterowane klawiaturą.
-- Ctrl-C kończy sesję interaktywną. Nie anuluje jeszcze tylko bieżącej odpowiedzi.
 - Pętla agenta, lokalne narzędzia świadome uprawnień i trwałe lokalne sesje są zaimplementowane, ale Marelle pozostaje prototypem pre-alpha; o obecnym projekcie i granicach czytaj [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
 
 ## Rozwój

@@ -7,6 +7,7 @@
 //! process directly, which keeps it deterministic and easy to test.
 
 mod args;
+mod cancel;
 mod chat;
 mod inspect;
 mod messages;

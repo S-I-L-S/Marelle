@@ -180,7 +180,6 @@ A tervezés mögötti gondolatmenet a [docs/ARCHITECTURE.md](docs/ARCHITECTURE.m
 
 - A szolgáltató- és modellválasztók a beállított szolgáltatókat és modell-áliasokat sorolják fel. A Marelle távoli modellkatalógusokat még nem deríti fel.
 - A választók támogatják az egérkattintást a fókuszhoz és a görgős görgetést; a transcript és a bemenetszerkesztő billentyűzetvezérelt marad.
-- A Ctrl-C kilép az interaktív munkamenetből. Egyelőre nem csak az aktuális választ szakítja meg.
 - Az ügynökciklus, az engedélytudatos helyi eszközök és a perzisztens helyi munkamenetek megvalósultak, de a Marelle pre-alpha prototípus marad; a jelenlegi tervet és határokat a [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) írja.
 
 ## Fejlesztés

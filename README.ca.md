@@ -180,7 +180,6 @@ El raonament darrere el disseny és a [docs/ARCHITECTURE.md](docs/ARCHITECTURE.m
 
 - Els selectors de proveïdors i models enumeren els proveïdors configurats i els sobrenoms de models. Marelle encara no descobreix catàlegs de models remots.
 - Els selectors sostenen el clic de ratolí per al focus i el desplaçament amb rodetes; la transcripció i l'editor d'entrada romanen dirigits per teclat.
-- Ctrl-C surt de la sessió interactiva. Encara no cancel·la només la resposta en curs.
 - El bucle d'agent, les eines locals conscients dels permisos i les sessions locals persistents són implementats, però Marelle roman un prototip pre-alfa; per al disseny actual i els seus límits, llegeix [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
 
 ## Desenvolupament

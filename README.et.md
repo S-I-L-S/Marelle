@@ -180,7 +180,6 @@ Disaini taga olev mõtlemine on [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)-is.
 
 - Pakkuja- ja mudelivalijad loetlevad seadistatud pakkujaid ja mudelite varjunimesid. Marelle ei avasta veel eemalseisvaid mudelkatalooge.
 - Valijad toetavad hiireklõpsu fookuseks ja kerimist rattaga; transkript ja sisestaja jäävad klaviatuuril juhitavaks.
-- Ctrl-C lahkub interaktiivsest sessioonist. Ta ei katkesta veel üksnes praegust vastust.
 - Agendi tsükkel, õigustest teadlikud kohalikud tööriistad ja püsivad kohalikud sessioonid on rakendatud, kuid Marelle jääb eel-alfa prototüübiks; praeguse kujunduse ja piiride kohta lugege [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
 
 ## Arendus

@@ -180,7 +180,6 @@ Interface English, Russian, French এবং Ukrainian বলে। `--lang <cod
 
 - Provider এবং model selectors কনফিগার করা providers এবং model aliases দেখায়। Marelle এখনও remote model catalogs আবিষ্কার করে না।
 - Selectors মাউসের click-to-focus এবং wheel scrolling সমর্থন করে; transcript এবং input editor keyboard-নির্ভরই থাকে।
-- Ctrl-C interactive session থেকে বেরিয়ে যায়। এটি এখনও শুধু চলমান response বাতিল করতে পারে না।
 - Agent loop, permission-aware লোকাল tools এবং স্থায়ী লোকাল sessions বাস্তবায়িত, তবু Marelle একটি pre-alpha prototype-ই রয়ে গেছে; বর্তমান ডিজাইন এবং সীমানার জন্য [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) দেখুন।
 
 ## ডেভেলপমেন্ট

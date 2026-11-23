@@ -180,7 +180,6 @@ Dizayn arkasyndaky oýlanma [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)-de.
 
 - Üpjünçi we model saýlaýjylary goýulan üpjünçileri we model lakamlaryny sanap görkezer. Marelle entek alystaky model kataloglaryny tapmaýar.
 - Saýlaýjylar fokus üçin süýjeni basmagy we çarpyz bilen aýlanmagy goldaýar; ýazgy we girişredaktöri klawiatura arkaly idare edilýär.
-- Ctrl-C interaktiw seansdan çykýar. Ýaňy diňe dowam edýän jogaby kesdär.
 - Agent aýlanmasy, rugsatlary bilýän ýerli gurallar we berk ýerli seanslar ýerine ýetirildi; emma Marelle öňki-alfa prototip bolup galýar. Häzirki dizaýny we çäklerini okamak üçin [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) okuň.
 
 ## Ösüş

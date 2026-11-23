@@ -180,7 +180,6 @@ Lý do đằng sau thiết kế nằm trong [docs/ARCHITECTURE.md](docs/ARCHITEC
 
 - Bộ chọn provider và model liệt kê các provider đã cấu hình và alias model. Marelle chưa tự khám phá catalog model từ xa.
 - Bộ chọn hỗ trợ nhấp chuột để lấy tiêu điểm và cuộn bằng bánh xe; transcript và trình soạn nhập vẫn điều khiển bằng bàn phím.
-- Ctrl-C thoát khỏi phiên tương tác. Nó chưa thể chỉ hủy riêng phản hồi hiện tại.
 - Agent loop, công cụ cục bộ có ý thức về quyền hạn và phiên cục bộ bền vững đã được hiện thực, nhưng Marelle vẫn là một prototype pre-alpha; xem [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) để biết thiết kế và ranh giới hiện tại.
 
 ## Phát triển

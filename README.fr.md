@@ -180,7 +180,6 @@ Le raisonnement derrière la conception se trouve dans [docs/ARCHITECTURE.md](do
 
 - Les sélecteurs de fournisseurs et de modèles listent les fournisseurs configurés et les alias de modèles. Marelle ne découvre pas encore de catalogues de modèles distants.
 - Les sélecteurs soutiennent le clic de souris pour la mise au point et le défilement à la molette ; le transcript et l'éditeur d'entrée restent menés au clavier.
-- Ctrl-C quitte la session interactive. Il n'annule pas encore uniquement la réponse en cours.
 - La boucle d'agent, les outils locaux conscients des permissions et les sessions locales persistantes sont réalisés, mais Marelle reste un prototype pré-alpha ; pour la conception actuelle et ses limites, voir [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
 
 ## Développement

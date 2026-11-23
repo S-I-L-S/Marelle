@@ -180,7 +180,6 @@ Pārdomas aiz dizaina ir [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
 
 - Piegādātāju un modeļu izvēlnes uzskaita uzstādītos piegādātājus un modeļu aizstājvārdus. Marelle vēl neatrod attālinātus modeļu katalogus.
 - Izvēlnes atbalsta peles klikšķi fokusam un ripināšanu ar ritenīti; transkrīts un ievades redaktors paliek ar tastatūru vadāmi.
-- Ctrl-C izej no interaktīvas sesijas. Vēl neatsaka tikai pašreizējo atbildi.
 - Aģenta cikls, lokāli rīki, kas apzin atļaujas, un noturīgas lokālas sesijas ieviesti, bet Marelle paliek priekš-alfa prototips; par pašreizējo dizainu un robežām lasiet [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
 
 ## Attīstība

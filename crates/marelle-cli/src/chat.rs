@@ -7,6 +7,7 @@
 //! the token counts, notes and errors go to standard error, so that
 //! `marelle chat ... > answer.txt` captures exactly the answer.
 
+use std::collections::VecDeque;
 use std::fs::{self, OpenOptions};
 use std::io::{self, Write};
 use std::ops::ControlFlow;
@@ -27,6 +28,7 @@ use tokio::task::JoinSet;
 use crate::Io;
 use crate::VERSION;
 use crate::args::ChatArgs;
+use crate::cancel::{Settled, Waited, settle, until_cancelled};
 use crate::messages::{Failure, config_failure, provider_failure, setting_failure};
 use crate::settings::{build_config, env_lookup};
 use crate::theme::{self, Role as ThemeRole, Theme};
@@ -1067,8 +1069,13 @@ fn single_turn(
             // return complete, structured tool calls without guessing at
             // partially streamed argument fragments.
             let mut events = Vec::new();
-            let result =
-                runtime.block_on(target.client.chat(&request, &mut |event: StreamEvent| {
+            // Only the full-screen interface can cancel: it owns raw mode, so
+            // Ctrl+C reaches it as a key and not as a signal that ends the
+            // process. What is typed meanwhile is set aside and handed back.
+            let listening = tui.is_some();
+            let mut typed_ahead = VecDeque::new();
+            let waited = runtime.block_on(until_cancelled(
+                target.client.chat(&request, &mut |event: StreamEvent| {
                     match event {
                         // A pause before a retry is told to the person and not
                         // kept: `events` is what they would have read, and an
@@ -1084,7 +1091,21 @@ fn single_turn(
                         other => events.push(other),
                     }
                     ControlFlow::Continue(())
-                }));
+                }),
+                || {
+                    if listening {
+                        crate::tui::listen_for_cancel(&mut typed_ahead)
+                    } else {
+                        Ok(false)
+                    }
+                },
+            ))?;
+            if let Some(ui) = tui.as_deref_mut() {
+                ui.requeue(typed_ahead);
+            }
+            let Waited::Done(result) = waited else {
+                return cancelled(&mut conversation.session, locale, io, tui, any_tool_call);
+            };
             let needs_clear = match &result {
                 Err(_) => true,
                 Ok(outcome) => !outcome.tool_calls.is_empty(),
@@ -1278,6 +1299,29 @@ fn single_turn(
     }
 
     Ok(1)
+}
+
+/// Ends a turn that the person cancelled with Ctrl+C. The transcript is told
+/// in every case; a question that nothing had acted on goes back to the input,
+/// ready to be edited.
+fn cancelled(
+    session: &mut Session,
+    locale: Locale,
+    io: &mut Io<'_>,
+    tui: Option<&mut Tui>,
+    tools_ran: bool,
+) -> io::Result<u8> {
+    let kept = tr(locale, "chat.cancelled.kept");
+    match settle(session, tools_ran, &kept) {
+        Settled::Withdrawn(question) => {
+            writeln!(io.err, "{}", tr(locale, "chat.cancelled"))?;
+            if let Some(ui) = tui {
+                ui.set_input(question)?;
+            }
+        }
+        Settled::Kept => writeln!(io.err, "{kept}")?,
+    }
+    Ok(OK)
 }
 
 /// Asks every compared model at once, then lets a judge merge the answers.

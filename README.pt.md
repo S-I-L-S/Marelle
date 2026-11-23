@@ -180,7 +180,6 @@ O raciocínio atrás do desenho está em [docs/ARCHITECTURE.md](docs/ARCHITECTUR
 
 - Os seletores de fornecedores e modelos listam os fornecedores configurados e os apelidos de modelos. A Marelle ainda não descobre catálogos de modelos remotos.
 - Os seletores sustentam clique de rato para o foco e rolamento com a rodinha; a transcrição e o editor de entrada ficam mandados do teclado.
-- Ctrl-C sai da sessão interativa. Ainda não cancela apenas a resposta em curso.
 - O ciclo de agente, as ferramentas locais conscientes de permissões e as sessões locais persistentes estão implementados, mas a Marelle fica um protótipo pré-alfa; para o desenho atual e os seus limites, leia [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
 
 ## Desenvolvimento

@@ -180,7 +180,6 @@ Dizayn arxasındakı düşüncə [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)-da
 
 - Təchizatçı və model seçiciləri qoyulmuş təchizatçıları və model ləqəblərini sadalayır. Marelle hələ uzaqdakı model kataloqlarını aşkar etmir.
 - Seçicilər fokus üçün siçan klikini və çarxla fırlatmayı dəstəkləyir; yazı və girişredaktoru klaviaturayla idarə olunur.
-- Ctrl-C interaktiv sessiyadan çıxır. Hələ yalnız cari cavabı kəsmir.
 - Ajan dövrü, icazələrdən xəbərdar yerli alətlər və davamlı yerli sessiyalar həyata keçirilib; amma Marelle ön-alfa prototip olaraq qalır. Hazırkı dizayn və sərhədlər üçün [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)-i oxuyun.
 
 ## İnkişaf

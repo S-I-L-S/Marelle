@@ -185,12 +185,14 @@ tool.label.fetch = Télécharger une page
 tool.notice.call = Outil {name} : {detail}
 tool.notice.result = {name} a renvoyé : {result}
 agent.max_turns.note = Agent arrêté : agent.max_turns ({max}) atteint.
+chat.cancelled = Annulé.
+chat.cancelled.kept = Annulé. Ce qui a déjà été fait reste dans la conversation.
 
 # --- full-screen interface ---
 tui.you = VOUS
 tui.info = INFO
 tui.ready = Prêt
-tui.generating = Génération…
+tui.generating = Génération… · Ctrl+C annule
 tui.failed = La requête s'est terminée par une erreur
 tui.empty = Commencez la conversation en écrivant ci-dessous.
 tui.input = Message

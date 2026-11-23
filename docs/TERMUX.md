@@ -107,7 +107,7 @@ The interface speaks English, Russian, French and Ukrainian: `MARELLE_LANG=ru ma
 
 - Settings come from the environment and flags only.
 - The interactive session has no line editing or history beyond what the terminal offers.
-- Ctrl-C ends the program, not just the current answer.
+- In the full-screen interface Ctrl-C cancels the current answer; in the line-oriented fallback it ends the program.
 - Chat only: no tools, no agent loop yet.
 
 ## Troubleshooting

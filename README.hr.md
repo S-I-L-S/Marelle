@@ -180,7 +180,6 @@ Razmišljanje iza dizajna je u [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
 
 - Biraci pružatelja i modela ispisuju postavljene pružatelje i aliase modela. Marelle još ne otkriva udaljene kataloge modela.
 - Biraci podržavaju klik mišom za fokus i kotrljanje točkića; transkript i uređivač unosa ostaju vođeni tipkovnicom.
-- Ctrl-C izlazi iz interaktivne sesije. Još ne prekida samo tekući odgovor.
 - Petlja agenta, lokalni alati svjesni ovlasti i trajne lokalne sesije provedene su, ali Marelle ostaje pre-alpha prototip; o sadašnjem dizajnu i granicama čitajte [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
 
 ## Razvoj
