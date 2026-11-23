@@ -185,12 +185,14 @@ tool.label.fetch = Загрузить страницу
 tool.notice.call = Инструмент {name}: {detail}
 tool.notice.result = {name} вернул: {result}
 agent.max_turns.note = Агент остановлен: достигнут agent.max_turns ({max}).
+chat.cancelled = Отменено.
+chat.cancelled.kept = Отменено. Всё, что уже сделано, остаётся в беседе.
 
 # --- full-screen interface ---
 tui.you = ВЫ
 tui.info = ИНФО
 tui.ready = Готово
-tui.generating = Генерация…
+tui.generating = Генерация… · Ctrl+C отменяет
 tui.failed = Запрос завершился с ошибкой
 tui.empty = Начните разговор: введите сообщение ниже.
 tui.input = Сообщение

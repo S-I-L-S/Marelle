@@ -79,6 +79,10 @@ pub(crate) struct Tui {
     /// Asked between events for news that arrives on its own time, such as
     /// the startup update check. Returning text turns it into a notice.
     update_poll: Option<Box<dyn FnMut() -> Option<String>>>,
+    /// Events that arrived while a model was answering. [`listen_for_cancel`]
+    /// sets them aside, and they are handled before the terminal is read
+    /// again, so that typing ahead is not lost.
+    queued: VecDeque<Event>,
 }
 
 impl Tui {
@@ -131,6 +135,7 @@ impl Tui {
             messages: Vec::new(),
             scroll: 0,
             update_poll: None,
+            queued: VecDeque::new(),
         };
         tui.render()?;
         Ok(tui)
@@ -384,10 +389,23 @@ impl Tui {
                 self.push_notice(text)?;
             }
         }
+        if let Some(event) = self.queued.pop_front() {
+            return self.handle_event(event);
+        }
         if !event::poll(std::time::Duration::from_millis(250))? {
             return Ok(InputAction::Continue);
         }
-        match event::read()? {
+        let event = event::read()?;
+        self.handle_event(event)
+    }
+
+    /// Hands back the events that were set aside while a model was answering.
+    pub(crate) fn requeue(&mut self, events: VecDeque<Event>) {
+        self.queued.extend(events);
+    }
+
+    fn handle_event(&mut self, event: Event) -> io::Result<InputAction> {
+        match event {
             Event::Key(key) => self.handle_key(key),
             Event::Paste(text) => {
                 self.insert_text(&text.replace("\r\n", "\n").replace('\r', "\n"));
@@ -894,9 +912,126 @@ fn command_hint(input: &str) -> String {
     .join("   ")
 }
 
+/// The most events set aside during one answer. Typing ahead is a few keys, a
+/// paste or a resize, so the bound only matters for a stuck key.
+const MAX_QUEUED_EVENTS: usize = 1024;
+
+/// Whether the event is Ctrl+C, the key that cancels an answer in progress.
+fn is_cancel(event: &Event) -> bool {
+    matches!(
+        event,
+        Event::Key(key)
+            if matches!(key.kind, KeyEventKind::Press | KeyEventKind::Repeat)
+                && key.modifiers.contains(KeyModifiers::CONTROL)
+                && matches!(key.code, KeyCode::Char('c'))
+    )
+}
+
+/// Splits what was typed into the cancel and what must wait. Keys, pastes and
+/// resizes are kept for later; the mouse and the rest are of no use to the
+/// transcript, so they are dropped. Returns whether Ctrl+C was among them.
+fn sift(events: impl IntoIterator<Item = Event>, kept: &mut VecDeque<Event>) -> bool {
+    let mut cancelled = false;
+    for event in events {
+        if is_cancel(&event) {
+            cancelled = true;
+        } else if matches!(event, Event::Key(_) | Event::Paste(_) | Event::Resize(_, _))
+            && kept.len() < MAX_QUEUED_EVENTS
+        {
+            kept.push_back(event);
+        }
+    }
+    cancelled
+}
+
+/// Looks at what the person typed since the last look, without waiting, and
+/// reports whether Ctrl+C was among it. Everything else goes into `kept`; give
+/// it back with [`Tui::requeue`] once the wait is over.
+pub(crate) fn listen_for_cancel(kept: &mut VecDeque<Event>) -> io::Result<bool> {
+    let mut pending = Vec::new();
+    while event::poll(std::time::Duration::ZERO)? {
+        pending.push(event::read()?);
+    }
+    Ok(sift(pending, kept))
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    fn key(code: KeyCode, modifiers: KeyModifiers) -> Event {
+        Event::Key(KeyEvent::new(code, modifiers))
+    }
+
+    #[test]
+    fn only_ctrl_c_cancels() {
+        assert!(is_cancel(&key(KeyCode::Char('c'), KeyModifiers::CONTROL)));
+        assert!(!is_cancel(&key(KeyCode::Char('c'), KeyModifiers::NONE)));
+        assert!(!is_cancel(&key(KeyCode::Char('d'), KeyModifiers::CONTROL)));
+        assert!(!is_cancel(&key(KeyCode::Esc, KeyModifiers::NONE)));
+        assert!(!is_cancel(&Event::Paste("c".to_owned())));
+    }
+
+    #[test]
+    fn releasing_the_key_is_not_a_second_cancel() {
+        let mut release = KeyEvent::new(KeyCode::Char('c'), KeyModifiers::CONTROL);
+        release.kind = KeyEventKind::Release;
+        assert!(!is_cancel(&Event::Key(release)));
+    }
+
+    #[test]
+    fn typing_ahead_survives_a_cancel_in_order() {
+        let mut kept = VecDeque::new();
+        let cancelled = sift(
+            [
+                key(KeyCode::Char('h'), KeyModifiers::NONE),
+                key(KeyCode::Char('c'), KeyModifiers::CONTROL),
+                key(KeyCode::Char('i'), KeyModifiers::NONE),
+            ],
+            &mut kept,
+        );
+        assert!(cancelled);
+        assert_eq!(
+            Vec::from(kept),
+            vec![
+                key(KeyCode::Char('h'), KeyModifiers::NONE),
+                key(KeyCode::Char('i'), KeyModifiers::NONE),
+            ]
+        );
+    }
+
+    #[test]
+    fn pastes_and_resizes_are_kept_and_the_mouse_is_not() {
+        let mut kept = VecDeque::new();
+        let cancelled = sift(
+            [
+                Event::Paste("text".to_owned()),
+                Event::Resize(100, 40),
+                Event::Mouse(crossterm::event::MouseEvent {
+                    kind: MouseEventKind::Moved,
+                    column: 1,
+                    row: 1,
+                    modifiers: KeyModifiers::NONE,
+                }),
+            ],
+            &mut kept,
+        );
+        assert!(!cancelled);
+        assert_eq!(
+            Vec::from(kept),
+            vec![Event::Paste("text".to_owned()), Event::Resize(100, 40)]
+        );
+    }
+
+    #[test]
+    fn the_set_aside_queue_is_bounded_but_a_cancel_still_gets_through() {
+        let mut kept = VecDeque::new();
+        let flood = (0..MAX_QUEUED_EVENTS + 50)
+            .map(|_| key(KeyCode::Char('x'), KeyModifiers::NONE))
+            .chain([key(KeyCode::Char('c'), KeyModifiers::CONTROL)]);
+        assert!(sift(flood, &mut kept));
+        assert_eq!(kept.len(), MAX_QUEUED_EVENTS);
+    }
 
     #[test]
     fn selector_mouse_rows_map_to_the_visible_items() {
@@ -950,6 +1085,7 @@ mod tests {
             messages: Vec::new(),
             scroll: 0,
             update_poll: None,
+            queued: VecDeque::new(),
         }
     }
 
