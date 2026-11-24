@@ -1,0 +1,82 @@
+name: Platforms
+
+# The test suite on the systems that ci.yml does not cover: Linux on arm64,
+# Windows and macOS. Linux x86_64, the 1.85 check and the Android cross builds
+# stay in ci.yml.
+#
+# Every job here is experimental for now. It runs and it reports, but its
+# failure does not fail the workflow, so a pull request is never blocked by a
+# platform that nobody has verified yet. When a job is green, take the
+# `experimental` flag off its row in the matrix.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: platforms-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  CARGO_INCREMENTAL: "0"
+
+# Third-party actions are pinned to a commit. The comment names the release.
+jobs:
+  test:
+    name: Clippy and tests on ${{ matrix.name }}
+    runs-on: ${{ matrix.os }}
+    continue-on-error: ${{ matrix.experimental }}
+    timeout-minutes: 45
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: Linux arm64
+            os: ubuntu-24.04-arm
+            experimental: true
+          - name: Windows x86_64
+            os: windows-latest
+            experimental: true
+          - name: macOS arm64
+            os: macos-latest
+            experimental: true
+    defaults:
+      run:
+        # Git Bash on Windows, so that one script serves all three systems.
+        shell: bash
+    steps:
+      - uses: actions/checkout@9f698171ed81b15d1823a05fc7211befd50c8ae0 # v6.0.3
+
+      - name: Install Rust
+        run: |
+          rustup toolchain install stable --profile minimal --component clippy --no-self-update
+          rustup default stable
+          rustc --version
+
+      - name: Clippy
+        run: cargo clippy --workspace --all-targets --locked --color never -- -D warnings 2>&1 | tee clippy.log
+
+      - name: Test
+        run: cargo test --workspace --locked --no-fail-fast --color never 2>&1 | tee test.log
+
+      - name: Copy the failure into an annotation
+        if: failure()
+        run: |
+          # An annotation can be read through the API, and the full job log
+          # cannot always be. That matters for a system nobody has at hand.
+          for log in clippy.log test.log; do
+            [ -f "$log" ] || continue
+            text="$(
+              {
+                grep -E '^error(\[|:)|^warning(\[|:)|^test .* FAILED|panicked at|^failures:' "$log" | head -n 40 || true
+                echo '--- end of the log ---'
+                tail -n 25 "$log"
+              } | tr -d '\r' | sed 's/%/%25/g' | awk '{ printf "%s%%0A", $0 }'
+            )"
+            echo "::error title=${log} on ${{ matrix.name }}::${text}"
+          done
