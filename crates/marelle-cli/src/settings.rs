@@ -5,6 +5,7 @@
 
 use std::path::PathBuf;
 
+use marelle_config::dirs::{self, Platform};
 use marelle_config::{Config, Layer, file, looks_like_env_name};
 use marelle_providers::{NetworkSettings, register_presets};
 
@@ -23,21 +24,14 @@ pub(crate) struct ConfigPaths {
 
 /// Works out the setting file paths from the environment snapshot.
 ///
-/// `XDG_CONFIG_HOME` wins over `HOME`. Without either there is no global
-/// file, which also keeps tests that pass no home directory deterministic.
+/// The global file is `marelle/config.toml` inside the directory that
+/// [`dirs::config_home`] picks: `XDG_CONFIG_HOME`, then on Windows `APPDATA`,
+/// then `~/.config`. Without any of them there is no global file, which also
+/// keeps tests that pass no home directory deterministic.
 pub(crate) fn config_paths(env_vars: &[(String, String)]) -> ConfigPaths {
-    let lookup = |name: &str| env_lookup(env_vars, name).filter(|value| !value.is_empty());
-    let global = lookup("XDG_CONFIG_HOME")
-        .map(PathBuf::from)
-        .map(|base| base.join("marelle").join("config.toml"))
-        .or_else(|| {
-            lookup("HOME").map(|home| {
-                PathBuf::from(home)
-                    .join(".config")
-                    .join("marelle")
-                    .join("config.toml")
-            })
-        });
+    let lookup = |name: &str| env_lookup(env_vars, name);
+    let global = dirs::config_home(Platform::HOST, &lookup)
+        .map(|base| base.join("marelle").join("config.toml"));
     let project = std::env::current_dir()
         .unwrap_or_else(|_| PathBuf::from("."))
         .join(".marelle")
