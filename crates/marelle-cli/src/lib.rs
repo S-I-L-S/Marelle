@@ -506,11 +506,29 @@ mod tests {
     fn config_path_names_both_files() {
         let (code, out, _) = run_cli(&["config", "path"], &[("HOME", "/home/someone")]);
         assert_eq!(code, 0);
+        // Built with the system's own separators, like the output is.
+        let global = std::path::Path::new("/home/someone")
+            .join(".config")
+            .join("marelle")
+            .join("config.toml");
+        let project = std::path::Path::new(".marelle").join("config.toml");
+        assert!(out.contains(&global.display().to_string()), "{out}");
+        assert!(out.contains(&project.display().to_string()), "{out}");
+        assert!(out.contains("missing"), "{out}");
+    }
+
+    #[cfg(windows)]
+    #[test]
+    fn config_path_uses_appdata_on_windows() {
+        let env = [
+            ("APPDATA", r"C:\Users\someone\AppData\Roaming"),
+            ("USERPROFILE", r"C:\Users\someone"),
+        ];
+        let (code, out, _) = run_cli(&["config", "path"], &env);
+        assert_eq!(code, 0);
         assert!(
-            out.contains("/home/someone/.config/marelle/config.toml"),
+            out.contains(r"C:\Users\someone\AppData\Roaming\marelle\config.toml"),
             "{out}"
         );
-        assert!(out.contains(".marelle/config.toml"), "{out}");
-        assert!(out.contains("missing"), "{out}");
     }
 }

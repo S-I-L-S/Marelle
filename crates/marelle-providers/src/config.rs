@@ -13,6 +13,7 @@
 use std::collections::BTreeSet;
 use std::path::PathBuf;
 
+use marelle_config::dirs::{Platform, home_dir};
 use marelle_config::{Config, Expected, SettingError, looks_like_env_name};
 use serde_json::{Map, Value};
 
@@ -328,11 +329,31 @@ impl ProviderConfig {
     }
 }
 
+/// Expands a leading `~` to the home directory. Only `~` alone and `~/...`
+/// are expanded, and on Windows also `~\...`; `~someone/...` is left as it is.
 pub(crate) fn expand_home(path: &str, lookup: &impl Fn(&str) -> Option<String>) -> PathBuf {
-    if path == "~" || path.starts_with("~/") {
-        if let Some(home) = lookup("HOME").filter(|home| !home.is_empty()) {
-            return PathBuf::from(home).join(path.trim_start_matches('~').trim_start_matches('/'));
+    expand_home_on(Platform::HOST, path, lookup)
+}
+
+fn expand_home_on(
+    platform: Platform,
+    path: &str,
+    lookup: &impl Fn(&str) -> Option<String>,
+) -> PathBuf {
+    let separators: &[char] = match platform {
+        Platform::Windows => &['/', '\\'],
+        Platform::Unix => &['/'],
+    };
+    let below_home = path
+        .strip_prefix('~')
+        .filter(|rest| rest.is_empty() || rest.starts_with(separators));
+    if let (Some(rest), Some(mut full)) = (below_home, home_dir(platform, lookup)) {
+        // One component at a time, so that the separators come out as the
+        // system's own.
+        for part in rest.split(separators).filter(|part| !part.is_empty()) {
+            full.push(part);
         }
+        return full;
     }
     PathBuf::from(path)
 }
@@ -418,6 +439,45 @@ mod tests {
         );
         let plain = ProviderConfig::from_config(&with_presets(), "zai").unwrap();
         assert_eq!(plain.api_key_file_path(|_| None), None);
+    }
+
+    #[test]
+    fn the_home_directory_is_expanded_the_way_each_system_spells_it() {
+        let unix = |name: &str| (name == "HOME").then(|| "/home/someone".to_owned());
+        let home = PathBuf::from("/home/someone");
+        assert_eq!(expand_home_on(Platform::Unix, "~", &unix), home);
+        assert_eq!(
+            expand_home_on(Platform::Unix, "~/keys//zai", &unix),
+            home.join("keys").join("zai")
+        );
+        // A backslash is an ordinary character on Unix, and `~other` is not
+        // ours to expand.
+        assert_eq!(
+            expand_home_on(Platform::Unix, r"~\keys", &unix),
+            PathBuf::from(r"~\keys")
+        );
+        assert_eq!(
+            expand_home_on(Platform::Unix, "~other/keys", &unix),
+            PathBuf::from("~other/keys")
+        );
+
+        let windows = |name: &str| (name == "USERPROFILE").then(|| r"C:\Users\someone".to_owned());
+        let profile = PathBuf::from(r"C:\Users\someone");
+        let below = profile.join("keys").join("zai");
+        assert_eq!(
+            expand_home_on(Platform::Windows, r"~\keys\zai", &windows),
+            below
+        );
+        assert_eq!(
+            expand_home_on(Platform::Windows, "~/keys/zai", &windows),
+            below
+        );
+
+        // Without a home directory the text is left alone.
+        assert_eq!(
+            expand_home_on(Platform::Unix, "~/keys", &|_: &str| None),
+            PathBuf::from("~/keys")
+        );
     }
 
     #[test]
@@ -594,7 +654,12 @@ mod tests {
             .unwrap_err();
         match error {
             ProviderError::ApiKeyFile { path, .. } => {
-                assert_eq!(path, "/nonexistent-home/definitely/not/here");
+                // Built with the system's own separators, like the error is.
+                let expected = std::path::Path::new("/nonexistent-home")
+                    .join("definitely")
+                    .join("not")
+                    .join("here");
+                assert_eq!(path, expected.display().to_string());
             }
             other => panic!("unexpected error: {other:?}"),
         }

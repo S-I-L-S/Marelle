@@ -2,6 +2,12 @@
 
 All notable changes are listed here, newest first. The project follows [Semantic Versioning](https://semver.org/), and while the version starts with `0.`, anything may change.
 
+## Unreleased
+
+### Fixed
+
+- Windows: the user-wide settings file is looked for in `%APPDATA%\marelle\config.toml`, after `XDG_CONFIG_HOME` and before `~/.config`, and a `~` in a settings path falls back to `USERPROFILE` when `HOME` is not set. Before, a Windows session without `HOME` had no user-wide settings file at all. `~\` is accepted there as well as `~/`.
+
 ## 0.1.0-alpha.1
 
 The first release that talks to a model.
