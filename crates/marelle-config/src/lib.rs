@@ -10,6 +10,7 @@ use std::collections::{BTreeMap, BTreeSet};
 use std::error::Error;
 use std::fmt;
 
+pub mod dirs;
 pub mod file;
 
 /// A configuration layer. Later variants override earlier ones.
