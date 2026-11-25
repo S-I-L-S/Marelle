@@ -1,0 +1,75 @@
+name: Bug report
+description: Marelle does something other than what the README or `marelle help` says
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thank you for the report. Please remove API keys and tokens from anything you paste. Marelle does not print them, but your shell history or another tool's log might.
+
+        A security problem does not belong here. See [SECURITY.md](https://github.com/S-I-L-S/marelle/blob/main/SECURITY.md).
+  - type: input
+    id: version
+    attributes:
+      label: Marelle version
+      description: The output of `marelle --version`.
+      placeholder: marelle 0.1.0-alpha.1
+    validations:
+      required: true
+  - type: dropdown
+    id: system
+    attributes:
+      label: System
+      options:
+        - Linux x86_64
+        - Linux arm64
+        - Termux on Android
+        - macOS
+        - Windows
+        - Something else (say which below)
+    validations:
+      required: true
+  - type: dropdown
+    id: install
+    attributes:
+      label: How did you get Marelle?
+      options:
+        - A release binary
+        - cargo install
+        - Built from a clone of the repository
+        - Something else (say which below)
+  - type: input
+    id: provider
+    attributes:
+      label: Provider
+      description: The provider id from `marelle providers`. Leave it empty if the problem has nothing to do with a model.
+  - type: textarea
+    id: happened
+    attributes:
+      label: What happened?
+      description: The command you ran and what you saw.
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: What did you expect instead?
+    validations:
+      required: true
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: How can it be reproduced?
+      description: The shortest sequence of commands and settings that shows the problem.
+  - type: textarea
+    id: settings
+    attributes:
+      label: Settings that matter
+      description: The relevant lines of `marelle config show`. It hides keys, but look it over before you paste it.
+      render: text
+  - type: textarea
+    id: output
+    attributes:
+      label: Output and errors
+      description: Whatever Marelle printed, on standard output and on standard error.
+      render: text

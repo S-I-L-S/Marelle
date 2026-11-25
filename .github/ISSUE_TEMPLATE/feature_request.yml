@@ -1,0 +1,46 @@
+name: Feature request
+description: Suggest something Marelle should do, or do differently
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Describe the problem before the solution. A good request says what you are trying to do and what gets in the way.
+
+        The design choices that shape the project are in [docs/ARCHITECTURE.md](https://github.com/S-I-L-S/marelle/blob/main/docs/ARCHITECTURE.md). A request that cuts across one of them is welcome, and it helps to say which one.
+  - type: textarea
+    id: problem
+    attributes:
+      label: What are you trying to do?
+      description: The situation, and what gets in your way today.
+    validations:
+      required: true
+  - type: textarea
+    id: idea
+    attributes:
+      label: What would you like Marelle to do?
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: What have you tried or considered?
+      description: Workarounds, other tools, other designs.
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      options:
+        - Providers and models
+        - Settings
+        - Terminal interface
+        - Interface languages
+        - Platforms and installation
+        - Documentation
+        - Something else
+  - type: dropdown
+    id: help
+    attributes:
+      label: Would you like to work on it?
+      options:
+        - Yes, I would send a pull request
+        - Maybe, with some guidance
+        - No, I am only suggesting it
