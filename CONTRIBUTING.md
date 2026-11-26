@@ -29,7 +29,7 @@ Run these before you push. CI runs the same.
 
 The last one needs [cargo-deny](https://github.com/EmbarkStudios/cargo-deny), in the version that CI runs: `cargo install --locked cargo-deny@0.22.1`.
 
-CI also cross-builds the Android binaries for Termux, and fails when one of them links against `libc++_shared`, `libssl`, `libcrypto` or `libz`, which Termux does not provide by default.
+CI also cross-builds the Android binaries for Termux, and fails when one of them links against `libc++_shared`, `libssl`, `libcrypto` or `libz`, which Termux does not provide by default. Clippy and the tests run once more on Linux arm64, Windows and macOS, and those three jobs have to pass as well.
 
 ## How the code is laid out
 

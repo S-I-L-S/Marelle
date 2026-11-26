@@ -4,10 +4,9 @@ name: Platforms
 # Windows and macOS. Linux x86_64, the 1.85 check and the Android cross builds
 # stay in ci.yml.
 #
-# Every job here is experimental for now. It runs and it reports, but its
-# failure does not fail the workflow, so a pull request is never blocked by a
-# platform that nobody has verified yet. When a job is green, take the
-# `experimental` flag off its row in the matrix.
+# All three jobs have to pass. A platform that nobody has verified yet joins the
+# matrix with `experimental: true`: it runs and it reports, but its failure
+# does not fail the workflow. Once it is green, take the flag off its row.
 
 on:
   push:
@@ -30,7 +29,7 @@ jobs:
   test:
     name: Clippy and tests on ${{ matrix.name }}
     runs-on: ${{ matrix.os }}
-    continue-on-error: ${{ matrix.experimental }}
+    continue-on-error: ${{ matrix.experimental || false }}
     timeout-minutes: 45
     strategy:
       fail-fast: false
@@ -38,13 +37,10 @@ jobs:
         include:
           - name: Linux arm64
             os: ubuntu-24.04-arm
-            experimental: true
           - name: Windows x86_64
             os: windows-latest
-            experimental: true
           - name: macOS arm64
             os: macos-latest
-            experimental: true
     defaults:
       run:
         # Git Bash on Windows, so that one script serves all three systems.
