@@ -1,0 +1,76 @@
+# SPDX-License-Identifier: AGPL-3.0-only
+# Copyright (C) 2026 Marelle contributors
+#
+# The dependency policy of Marelle, checked by cargo-deny:
+#
+#     cargo deny check
+#
+# CI runs the same check with cargo-deny 0.22.1, in
+# .github/workflows/dependencies.yml. Every option is described at
+# https://embarkstudios.github.io/cargo-deny/
+
+# No list of targets, so that a crate which only one platform pulls in is held
+# to the same rules as the rest.
+[graph]
+all-features = true
+
+[advisories]
+# A yanked version was withdrawn by its author.
+yanked = "deny"
+# Look at the whole graph, not only at what Marelle asks for by name.
+unmaintained = "all"
+unsound = "all"
+# An advisory that was looked into and accepted is listed here with the reason:
+#     { id = "RUSTSEC-0000-0000", reason = "why it does not reach Marelle" }
+ignore = []
+
+[licenses]
+# The permissive licences that CONTRIBUTING.md accepts, plus two that are
+# already in the graph. A crate under anything else fails the check. That calls
+# for a decision, not just for a longer list.
+allow = [
+    "Apache-2.0",
+    "Apache-2.0 WITH LLVM-exception",
+    "BSD-2-Clause",
+    "BSD-3-Clause",
+    "CDLA-Permissive-2.0", # webpki-roots, the Mozilla root certificates
+    "ISC",
+    "MIT",
+    "Unicode-3.0",
+    "Zlib",
+]
+# The list is a policy, so an entry that no crate needs today is not a mistake.
+unused-allowed-license = "allow"
+# Marelle's own crates are AGPL-3.0-only. The licence is allowed for them by
+# name, so that a third-party AGPL crate does not slip in unnoticed.
+exceptions = [
+    { crate = "marelle-cli", allow = ["AGPL-3.0-only"] },
+    { crate = "marelle-config", allow = ["AGPL-3.0-only"] },
+    { crate = "marelle-core", allow = ["AGPL-3.0-only"] },
+    { crate = "marelle-i18n", allow = ["AGPL-3.0-only"] },
+    { crate = "marelle-providers", allow = ["AGPL-3.0-only"] },
+    { crate = "marelle-testkit", allow = ["AGPL-3.0-only"] },
+]
+
+[bans]
+# Two versions of one crate cost build time and size, but are often not in our
+# hands. They are reported and do not fail the check.
+multiple-versions = "warn"
+highlight = "all"
+# TLS is rustls with the ring provider and its own list of root certificates.
+# docs/ARCHITECTURE.md says why.
+deny = [
+    { crate = "openssl", reason = "TLS is rustls; a Termux user must not need libssl or libcrypto" },
+    { crate = "openssl-sys", reason = "TLS is rustls; a Termux user must not need libssl or libcrypto" },
+    { crate = "native-tls", reason = "it brings the TLS library of the system, and Marelle brings its own" },
+    { crate = "aws-lc-rs", reason = "the rustls provider is ring; one C cryptography library is enough" },
+    { crate = "aws-lc-sys", reason = "the rustls provider is ring; one C cryptography library is enough" },
+]
+
+[sources]
+# Crates come from crates.io only. A git dependency or another registry would be
+# outside what the advisory database covers.
+unknown-registry = "deny"
+unknown-git = "deny"
+allow-registry = ["https://github.com/rust-lang/crates.io-index"]
+allow-git = []
