@@ -8,6 +8,10 @@ All notable changes are listed here, newest first. The project follows [Semantic
 
 - Windows: the user-wide settings file is looked for in `%APPDATA%\marelle\config.toml`, after `XDG_CONFIG_HOME` and before `~/.config`, and a `~` in a settings path falls back to `USERPROFILE` when `HOME` is not set. Before, a Windows session without `HOME` had no user-wide settings file at all. `~\` is accepted there as well as `~/`.
 
+### Security
+
+- The `url` crate, which comes in with the HTTP client, is updated from 2.5.8 to 2.5.9. With 2.5.8, calling `Url::origin()` on a deeply nested `blob:` URL overflowed the stack and aborted the program ([RUSTSEC-2026-0592](https://rustsec.org/advisories/RUSTSEC-2026-0592)). Neither Marelle nor the crates in its build that use `url` call that function.
+
 ## 0.1.0-alpha.1
 
 The first release that talks to a model.
