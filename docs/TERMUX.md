@@ -22,12 +22,12 @@ uname -m
 
 `aarch64` is nearly every phone made in the last several years. `armv7l` and `armv8l` mean a 32-bit system. The matching archive names are `aarch64-linux-android` and `armv7-linux-androideabi`. For `x86_64` (an emulator or a Chromebook) build on the device, as described in the next section.
 
-Then download, verify and install. Take the newest version from the [Releases page](https://github.com/cornier-en-branche/marelle/releases).
+Then download, verify and install. Take the newest version from the [Releases page](https://github.com/S-I-L-S/marelle/releases).
 
 ```sh
 VERSION=v0.1.0-alpha.1
 ARCH=aarch64-linux-android        # or armv7-linux-androideabi
-BASE=https://github.com/cornier-en-branche/marelle/releases/download/$VERSION
+BASE=https://github.com/S-I-L-S/marelle/releases/download/$VERSION
 
 cd ~
 curl -fLO "$BASE/marelle-$VERSION-$ARCH.tar.gz"
@@ -48,7 +48,7 @@ This works when there is no release for your CPU, or when you want to build from
 pkg update && pkg upgrade
 pkg install rust git
 termux-wake-lock
-cargo install --locked --root "$PREFIX" --git https://github.com/cornier-en-branche/marelle marelle-cli
+cargo install --locked --root "$PREFIX" --git https://github.com/S-I-L-S/marelle marelle-cli
 marelle version
 ```
 
@@ -59,7 +59,7 @@ marelle version
 
   ```sh
   CARGO_BUILD_JOBS=1 CARGO_PROFILE_RELEASE_LTO=off \
-    cargo install --locked --root "$PREFIX" --git https://github.com/cornier-en-branche/marelle marelle-cli
+    cargo install --locked --root "$PREFIX" --git https://github.com/S-I-L-S/marelle marelle-cli
   ```
 
 If the build dies with `[Process completed (signal 9)]`, see Troubleshooting below.
