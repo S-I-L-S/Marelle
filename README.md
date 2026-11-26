@@ -15,12 +15,12 @@ English | [Русский](README.ru.md)
 
 ## Install
 
-**Termux on Android.** Download a prebuilt binary from [Releases](https://github.com/cornier-en-branche/marelle/releases), or build on the phone. Step by step: [docs/TERMUX.md](docs/TERMUX.md).
+**Termux on Android.** Download a prebuilt binary from [Releases](https://github.com/S-I-L-S/marelle/releases), or build on the phone. Step by step: [docs/TERMUX.md](docs/TERMUX.md).
 
 **Linux, and anywhere else Rust runs.** Rust 1.85 or newer:
 
 ```sh
-cargo install --locked --git https://github.com/cornier-en-branche/marelle marelle-cli
+cargo install --locked --git https://github.com/S-I-L-S/marelle marelle-cli
 ```
 
 Or clone the repository and run `cargo build --release`. The binary is `target/release/marelle`, about 4 MiB.

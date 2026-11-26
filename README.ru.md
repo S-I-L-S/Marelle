@@ -15,12 +15,12 @@
 
 ## Установка
 
-**Termux на Android.** Скачайте готовый бинарник на странице [Releases](https://github.com/cornier-en-branche/marelle/releases) или соберите на телефоне. Пошаговая инструкция: [docs/TERMUX.ru.md](docs/TERMUX.ru.md).
+**Termux на Android.** Скачайте готовый бинарник на странице [Releases](https://github.com/S-I-L-S/marelle/releases) или соберите на телефоне. Пошаговая инструкция: [docs/TERMUX.ru.md](docs/TERMUX.ru.md).
 
 **Linux и всё остальное, где есть Rust.** Нужен Rust 1.85 или новее:
 
 ```sh
-cargo install --locked --git https://github.com/cornier-en-branche/marelle marelle-cli
+cargo install --locked --git https://github.com/S-I-L-S/marelle marelle-cli
 ```
 
 Или склонируйте репозиторий и выполните `cargo build --release`. Бинарник лежит в `target/release/marelle`, около 4 МиБ.
