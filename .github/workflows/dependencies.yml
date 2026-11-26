@@ -1,0 +1,47 @@
+name: Dependencies
+
+# The dependency policy in deny.toml: known vulnerabilities, yanked versions,
+# licences, banned crates and where the crates come from.
+#
+# It runs every Monday as well, because an advisory can be published against a
+# version that has not changed in months. A pull request can therefore turn red
+# for an advisory that it did not bring in. That is intended: either update the
+# crate, or record in deny.toml why the advisory does not reach Marelle.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  schedule:
+    - cron: "23 5 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: dependencies-${{ github.ref }}
+  cancel-in-progress: true
+
+# Third-party actions are pinned to a commit. The comment names the release.
+jobs:
+  deny:
+    name: cargo deny check ${{ matrix.checks }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        # Two jobs, so that a new advisory and a change in the dependencies can
+        # be told apart at a glance.
+        checks:
+          - advisories
+          - bans licenses sources
+    steps:
+      - uses: actions/checkout@9f698171ed81b15d1823a05fc7211befd50c8ae0 # v6.0.3
+
+      # This release runs cargo-deny 0.22.1. The same locally:
+      #   cargo install --locked cargo-deny@0.22.1 && cargo deny check
+      - uses: EmbarkStudios/cargo-deny-action@81891abc19297b21343b15ef67dc61e4aea74fda # v2.1.4
+        with:
+          command: check ${{ matrix.checks }}

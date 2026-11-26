@@ -25,6 +25,9 @@ Run these before you push. CI runs the same.
 | `cargo clippy --workspace --all-targets --locked -- -D warnings` | There are no lint warnings |
 | `cargo test --workspace --locked` | The tests pass |
 | `cargo +1.85.0 check --workspace --all-targets --locked` | The oldest supported Rust still builds it |
+| `cargo deny check` | The dependencies keep to the policy in [deny.toml](deny.toml) |
+
+The last one needs [cargo-deny](https://github.com/EmbarkStudios/cargo-deny), in the version that CI runs: `cargo install --locked cargo-deny@0.22.1`.
 
 CI also cross-builds the Android binaries for Termux, and fails when one of them links against `libc++_shared`, `libssl`, `libcrypto` or `libz`, which Termux does not provide by default.
 
@@ -85,5 +88,7 @@ A test or a lint enforces most of these. Review enforces the rest.
 ## Dependencies and licences
 
 Marelle is AGPL-3.0-only, and contributions are accepted under the same licence. A new dependency needs a licence that is compatible with it (MIT, Apache-2.0, BSD, ISC, Zlib and Unicode are fine; ask first about anything else) and an up-to-date `Cargo.lock`. `scripts/third-party-licenses.py` prints the notices that travel with a release.
+
+[deny.toml](deny.toml) holds the part of this that a machine can check: the accepted licences, no OpenSSL, native-tls or aws-lc, crates from crates.io only, and no yanked version or open advisory. CI also runs it every Monday, so a new advisory is noticed while nobody is changing anything. When an advisory does not reach Marelle and there is no update to take, list it in `deny.toml` with the reason.
 
 Code taken from another project comes in only under a compatible licence and with an entry in [NOTICE](NOTICE).
