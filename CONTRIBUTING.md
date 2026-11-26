@@ -6,7 +6,7 @@ Found a security problem? Do not open a public issue. [SECURITY.md](SECURITY.md)
 
 ## Set up
 
-You need Rust 1.85 or newer, and nothing else: Marelle carries its own list of certificate authorities and needs no system TLS library.
+You need Rust 1.85 or newer and a C compiler with a linker, which the cryptography library `ring` is built with. On Linux that is `build-essential` or its equivalent, on macOS the Xcode command line tools, on Windows the Visual Studio Build Tools with the C++ workload. Marelle needs no system TLS library: it carries its own list of certificate authorities.
 
 ```sh
 git clone https://github.com/S-I-L-S/marelle
@@ -26,7 +26,7 @@ Run these before you push. CI runs the same.
 | `cargo test --workspace --locked` | The tests pass |
 | `cargo +1.85.0 check --workspace --all-targets --locked` | The oldest supported Rust still builds it |
 
-CI also cross-builds the Android binaries for Termux, and fails when one of them needs a library that Termux does not provide.
+CI also cross-builds the Android binaries for Termux, and fails when one of them links against `libc++_shared`, `libssl`, `libcrypto` or `libz`, which Termux does not provide by default.
 
 ## How the code is laid out
 

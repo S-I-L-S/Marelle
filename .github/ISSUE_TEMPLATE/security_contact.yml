@@ -1,0 +1,17 @@
+name: Private channel for a security report
+description: Ask for a private way to report a security problem. Leave the problem itself out.
+title: "Private channel for a security report"
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Everything on this page is public. **Do not describe the problem here**: no details, no steps to reproduce, no API key, no proof of concept.
+
+        A maintainer will answer and invite you to a private draft security advisory, where the details can go. If the **Security** tab of the repository offers **Report a vulnerability**, use that instead and skip this form. The whole policy is in [SECURITY.md](https://github.com/S-I-L-S/marelle/blob/main/SECURITY.md).
+  - type: checkboxes
+    id: no-details
+    attributes:
+      label: Before you send this
+      options:
+        - label: This issue contains no details of the problem, and no API key or token.
+          required: true

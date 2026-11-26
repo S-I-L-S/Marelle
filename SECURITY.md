@@ -10,7 +10,7 @@ Marelle is pre-alpha. Fixes go into the `main` branch and into the latest releas
 
 Please do not open a public issue for a security problem.
 
-Use GitHub's private vulnerability reporting: open the **Security** tab of the repository and choose **Report a vulnerability**. If that button is missing, open an issue that says only "I need a private channel for a security report", with no details. A maintainer will answer there and move the conversation out of public view.
+Use GitHub's private vulnerability reporting: open the **Security** tab of the repository and choose **Report a vulnerability**. If that button is missing, open a new issue and choose **Private channel for a security report**. The form asks you to leave the problem itself out. A maintainer will answer there and invite you to a private draft security advisory, where the details go.
 
 A good report says what you found, how to reproduce it (the shortest command line or settings file that shows it), the Marelle version from `marelle --version`, and your system. Please do not include a working API key.
 
