@@ -109,8 +109,8 @@ fn key_column(
 fn write_table(out: &mut dyn Write, header: &[String; 4], rows: &[[String; 4]]) -> io::Result<()> {
     let width = |column: usize| {
         rows.iter()
-            .map(|row| row[column].chars().count())
-            .chain(std::iter::once(header[column].chars().count()))
+            .map(|row| crate::text::width(&row[column]))
+            .chain(std::iter::once(crate::text::width(&header[column])))
             .max()
             .unwrap_or(0)
     };
@@ -121,7 +121,7 @@ fn write_table(out: &mut dyn Write, header: &[String; 4], rows: &[[String; 4]]) 
         for (index, cell) in cells.iter().enumerate() {
             text.push_str(cell);
             if index + 1 < cells.len() {
-                let padding = widths[index] - cell.chars().count();
+                let padding = widths[index] - crate::text::width(cell);
                 text.extend(std::iter::repeat_n(' ', padding + 2));
             }
         }

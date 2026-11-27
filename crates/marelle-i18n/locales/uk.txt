@@ -6,7 +6,7 @@ app.tagline = Налаштовуваний ШІ-агент для вашого �
 
 # --- довідка ---
 help.usage = Використання
-help.usage.line = marelle [--lang <код>] <команда> [параметри]
+help.usage.line = marelle [--lang <code>] [chat] [параметри] [запит]
 help.commands = Команди
 help.cmd.chat = Розмова з моделлю: одне запитання, конвеєр або інтерактивний сеанс
 help.cmd.providers = Перелік провайдерів і звідки беруться їхні API-ключі
@@ -15,6 +15,8 @@ help.cmd.help = Показати цю довідку
 help.cmd.version = Показати версію
 help.chat_options = Параметри chat
 help.opt.provider = Ідентифікатор провайдера (див.: marelle providers)
+help.opt.query = Надіслати один запит і завершити роботу
+help.opt.continue = Продовжити останню збережену розмову
 help.opt.model = Назва моделі або провайдер/модель, якщо провайдера не вибрано
 help.opt.system = Системний промпт
 help.opt.max_tokens = Обмежити довжину відповіді в токенах
@@ -27,7 +29,7 @@ help.opt.lang = Мова інтерфейсу: en, ru, fr, uk
 help.examples = Приклади
 help.example.ask = Поставити одне запитання
 help.example.pipe = Передати вивід команди разом із запитанням («-» означає stdin)
-help.example.repl = Запустити інтерактивний сеанс
+help.example.repl = Запустити інтерактивний чат командою `marelle` або `marelle --tui`
 help.env = Будь-яке налаштування можна задати й через середовище: MARELLE_CHAT__MODEL=zai/MODEL задає chat.model.
 help.exit_codes = Коди виходу: 0 — успіх, 1 — помилка провайдера або мережі, 2 — помилка у виклику чи в налаштуваннях.
 
@@ -64,10 +66,12 @@ chat.judge.header = суддя: {label}
 
 # --- інтерактивний сеанс ---
 repl.banner = {provider} / {model} - /help покаже команди, /exit завершить сеанс
-repl.help = Команди: /help  /clear  /model [назва]  /compare [моделі|off]  /fallback [моделі|off]  /judge [модель|off]  /system [текст|off]  /exit
+repl.help = Команди: /help  /clear  /model [назва]  /provider [id|off]  /session [new|назва]  /compare [моделі|off]  /fallback [моделі|off]  /judge [модель|off]  /system [текст|off]  /tools  /skills  /exit  ·  Ctrl+P відкриває палітру команд
 repl.cleared = Розмову очищено.
 repl.model = Модель: {model}
 repl.model_set = Модель переключено на {model}.
+repl.models.discovering = Отримую список моделей від {provider}…
+repl.models.unavailable = Не вдалося завантажити каталог моделей: {reason}. Показую налаштовані моделі.
 repl.system = Системний промпт: {text}
 repl.system_none = Системного промпту немає.
 repl.system_set = Системний промпт задано.
@@ -93,6 +97,11 @@ ui.model = модель
 ui.compare = порівняння
 ui.system = система
 ui.thinking = чекаю на перший токен...
+retry.notice = {cause}. Повтор через {seconds} с (спроба {attempt} з {attempts}).
+retry.cause.http = Провайдер відповів HTTP {status}
+retry.cause.busy = Провайдер повідомляє, що зайнятий
+retry.cause.network = Збій з'єднання
+retry.cause.timeout = Не вдалося з'єднатися вчасно
 
 # --- таблиця провайдерів ---
 providers.col.name = Провайдер
@@ -158,3 +167,93 @@ fail.invalid_value = Налаштування {key}: {reason}.
 fail.config_file = Не вдалося використати файл налаштувань: {detail}
 expected.list = список слів
 expected.hex_color = колір у HEX, наприклад #B57EDC
+
+update.available = Вийшла нова версія {latest} (зараз {current}). Докладніше: {url}
+tool.confirm.title = {label}?
+tool.confirm.allow_once = Дозволити один раз
+tool.confirm.allow_once.detail = Виконати цей виклик інструменту один раз
+tool.confirm.allow_always = Дозволити завжди
+tool.confirm.allow_always.detail = Більше не питати про такі інструменти до кінця сеансу
+tool.confirm.deny = Заборонити
+tool.confirm.deny.detail = Не виконувати цей виклик інструменту
+tool.label.terminal = Виконати команду в терміналі
+tool.label.read = Прочитати файл
+tool.label.list = Показати каталог
+tool.label.search = Шукати у файлах
+tool.label.modify = Змінити файл
+tool.label.fetch = Завантажити сторінку
+tool.notice.call = Інструмент {name}: {detail}
+tool.notice.result = {name} повернув: {result}
+agent.max_turns.note = Агента зупинено: досягнуто agent.max_turns ({max}).
+chat.cancelled = Скасовано.
+chat.cancelled.kept = Скасовано. Усе, що вже зроблено, лишається в розмові.
+
+# --- full-screen interface ---
+tui.you = ВИ
+tui.info = ІНФО
+tui.ready = Готово
+tui.generating = Генерація… · Ctrl+C скасовує
+tui.failed = Запит завершився з помилкою
+tui.empty = Почніть розмову: введіть повідомлення нижче.
+tui.input = Повідомлення
+tui.footer = Enter надіслати · Shift+Enter новий рядок · ↑↓ історія · PgUp/PgDn прокрутка · Ctrl+P палітра · Ctrl+C вихід
+tui.footer.hinted = Enter надіслати · Shift+Enter новий рядок
+tui.select.keys = ↑↓ або колесо - навігація · клік - фокус · Enter - вибір · Esc - скасування
+tui.select.footer = Пунктів: {count}  ·  Esc повертає до розмови
+tui.select.palette = Палітра команд
+tui.select.model = Оберіть модель
+tui.select.provider = Оберіть провайдера
+tui.select.session = Перемкнути розмову
+tui.item.current = (зараз)
+tui.item.messages = повідомлень: {count}
+tui.item.current_model = Поточна модель: {model}
+tui.item.discovered = знайдена модель
+tui.item.no_provider = провайдера не задано
+tui.item.model_current = поточна модель
+tui.item.custom_endpoint = власна адреса
+
+# --- command palette ---
+palette.model = Обрати модель
+palette.model.detail = Змінити активну модель
+palette.provider = Обрати провайдера
+palette.provider.detail = Змінити провайдера для назв моделей без префікса
+palette.compare = Порівняти моделі
+palette.compare.detail = Задати або переглянути паралельне порівняння моделей
+palette.fallback = Запасні моделі
+palette.fallback.detail = Задати або переглянути запасні моделі
+palette.judge = Модель-суддя
+palette.judge.detail = Обрати модель, яка об'єднує результати порівняння
+palette.system = Системний промпт
+palette.system.detail = Задати, переглянути або вимкнути системний промпт
+palette.session = Перемкнути розмову
+palette.session.detail = Повернутися до розмови, що зберігається в пам'яті
+palette.session_new = Нова розмова
+palette.session_new.detail = Створити порожню розмову в пам'яті
+palette.clear = Очистити розмову
+palette.clear.detail = Видалити повідомлення з поточної розмови
+palette.tools = Доступні інструменти
+palette.tools.detail = Показати вбудовані локальні інструменти агента
+palette.skills = Локальні навички
+palette.skills.detail = Показати доступні локальні інструкції навичок
+palette.help = Довідка
+palette.help.detail = Показати доступні команди чату
+palette.exit = Вихід
+palette.exit.detail = Вийти з інтерактивного сеансу
+
+# --- slash command replies ---
+cmd.tools = Доступні інструменти:
+cmd.provider.current = Поточний провайдер: {name}
+cmd.provider.none = не обрано
+cmd.provider.off = Перевизначення провайдера вимкнено
+cmd.provider.set = Провайдера змінено на {name}
+cmd.session.list = Розмови: {names}
+cmd.session.created = Створено розмову {name}
+cmd.session.switched = Перемкнено на {name}
+cmd.session.missing = Розмови з назвою {name} немає
+
+# --- saved sessions ---
+session.error.load = Marelle: не вдалося завантажити збережені сеанси: {error}
+session.none = Збережених сеансів Marelle не знайдено. Спочатку почніть чат або запустіть marelle chat.
+
+# --- tool approval in line mode ---
+tool.confirm.line.keys = [y] один раз  [a] завжди в цьому сеансі  [N] заборонити

@@ -11,7 +11,8 @@
 //! * [`Client`] sends one [`ChatRequest`] and hands the answer to a sink piece
 //!   by piece, then returns a [`ChatOutcome`].
 //! * [`NetworkSettings`] holds what applies to every provider: timeouts,
-//!   proxy, extra certificate authorities.
+//!   proxy, extra certificate authorities, and the [`RetryPolicy`] for a
+//!   provider that is busy.
 //!
 //! An API key is never stored in a setting. A setting names the environment
 //! variable or the file that holds it, and the key travels in a [`Secret`]
@@ -25,14 +26,16 @@ mod decode;
 mod error;
 mod openai;
 mod presets;
+mod retry;
 mod secret;
 mod sse;
 
-pub use chat::{ChatOutcome, ChatRequest, FinishReason, Sink, StreamEvent, Usage};
-pub use client::{Client, NetworkSettings, ProxySetting};
+pub use chat::{ChatOutcome, ChatRequest, FinishReason, Sink, StreamEvent, ToolDefinition, Usage};
+pub use client::{Client, NetworkSettings, ProxySetting, plain_client};
 pub use config::{
     AuthStyle, MaxTokensField, ProviderConfig, ProviderKind, normalize_name, provider_names,
 };
 pub use error::ProviderError;
 pub use presets::{PRESETS, Preset, preset, register_presets};
+pub use retry::{Retry, RetryCause, RetryPolicy};
 pub use secret::Secret;

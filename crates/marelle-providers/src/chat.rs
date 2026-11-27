@@ -5,7 +5,21 @@
 
 use std::ops::ControlFlow;
 
-use marelle_core::Message;
+use marelle_core::{Message, ToolCall};
+use serde_json::Value;
+
+use crate::retry::Retry;
+
+/// A function the model may call.
+#[derive(Debug, Clone, PartialEq)]
+pub struct ToolDefinition {
+    /// Stable function name.
+    pub name: String,
+    /// Human-readable purpose.
+    pub description: String,
+    /// JSON Schema for the function arguments.
+    pub parameters: Value,
+}
 
 /// One chat request, independent of the provider's wire format.
 #[derive(Debug, Clone, PartialEq)]
@@ -22,6 +36,8 @@ pub struct ChatRequest {
     pub temperature: Option<f64>,
     /// Whether to receive the answer as a stream.
     pub stream: bool,
+    /// Functions exposed to the model for this request.
+    pub tools: Vec<ToolDefinition>,
 }
 
 /// A piece of an answer, delivered as it arrives.
@@ -31,10 +47,15 @@ pub enum StreamEvent {
     Text(String),
     /// Part of the model's reasoning, for models that expose it.
     Reasoning(String),
+    /// The provider was busy or unreachable and the request will be sent
+    /// again after a pause. It arrives before the pause, and only while no
+    /// text or reasoning has been delivered, so nothing is ever repeated.
+    Retrying(Retry),
 }
 
 /// The receiver of stream events. Returning [`ControlFlow::Break`] stops the
-/// request early, for example when the output pipe has closed.
+/// request early, for example when the output pipe has closed, or ends the
+/// wait before a retry.
 pub type Sink<'a> = dyn FnMut(StreamEvent) -> ControlFlow<()> + 'a;
 
 /// Token counts reported by the provider. Every field is optional because
@@ -92,6 +113,8 @@ pub struct ChatOutcome {
     pub usage: Usage,
     /// Why the model stopped.
     pub finish: FinishReason,
+    /// Functions requested by the model.
+    pub tool_calls: Vec<ToolCall>,
 }
 
 /// Collects what a decoder sees and forwards events to the sink.
@@ -100,6 +123,7 @@ pub(crate) struct Collector {
     pub text: String,
     pub usage: Usage,
     pub finish: Option<FinishReason>,
+    pub tool_calls: Vec<ToolCall>,
     pub done: bool,
 }
 
@@ -124,6 +148,7 @@ impl Collector {
             text: self.text,
             usage: self.usage,
             finish: finish.or(self.finish).unwrap_or(FinishReason::Stop),
+            tool_calls: self.tool_calls,
         }
     }
 }

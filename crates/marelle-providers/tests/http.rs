@@ -11,7 +11,7 @@ use marelle_config::{Config, Layer};
 use marelle_core::{Message, Role};
 use marelle_providers::{
     ChatOutcome, ChatRequest, Client, FinishReason, NetworkSettings, ProviderConfig, ProviderError,
-    ProxySetting, Secret, StreamEvent,
+    ProxySetting, Retry, RetryCause, RetryPolicy, Secret, StreamEvent,
 };
 use marelle_testkit::{MockServer, Reply};
 use serde_json::{Value, json};
@@ -41,11 +41,63 @@ fn provider(server: &MockServer, kind: &str) -> ProviderConfig {
     provider_at(&server.base_url(), kind, &[])
 }
 
+/// Settings that never try again, so that an error shows up at once.
 fn network() -> NetworkSettings {
     NetworkSettings {
         proxy: ProxySetting::None,
+        retry: RetryPolicy::none(),
         ..NetworkSettings::default()
     }
+}
+
+/// A policy that retries without making the tests wait.
+fn quick(max_retries: u32) -> RetryPolicy {
+    RetryPolicy {
+        max_retries,
+        first_delay: Duration::from_millis(1),
+        max_delay: Duration::from_millis(5),
+        budget: Duration::from_secs(5),
+    }
+}
+
+fn retrying(max_retries: u32) -> NetworkSettings {
+    NetworkSettings {
+        retry: quick(max_retries),
+        ..network()
+    }
+}
+
+/// The retry notices that a sink received, in order.
+fn notices(seen: &[StreamEvent]) -> Vec<&Retry> {
+    seen.iter()
+        .filter_map(|event| match event {
+            StreamEvent::Retrying(retry) => Some(retry),
+            _ => None,
+        })
+        .collect()
+}
+
+fn causes(seen: &[StreamEvent]) -> Vec<(u32, RetryCause)> {
+    notices(seen)
+        .iter()
+        .map(|retry| (retry.attempt, retry.cause))
+        .collect()
+}
+
+fn stop() -> String {
+    data(&json!({"choices": [{"delta": {}, "finish_reason": "stop"}]}))
+}
+
+fn done() -> String {
+    "data: [DONE]\n\n".to_owned()
+}
+
+fn whole(content: &str) -> Reply {
+    Reply::json(
+        200,
+        &json!({"choices": [{"message": {"role": "assistant", "content": content}, "finish_reason": "stop"}]})
+            .to_string(),
+    )
 }
 
 fn client_with(provider: &ProviderConfig, network: &NetworkSettings) -> Client {
@@ -64,6 +116,7 @@ fn request(stream: bool) -> ChatRequest {
         max_tokens: Some(64),
         temperature: None,
         stream,
+        tools: Vec::new(),
     }
 }
 
@@ -570,4 +623,438 @@ fn a_whole_conversation_is_sent_in_order() {
         .map(|m| m["content"].as_str().expect("text").to_owned())
         .collect();
     assert_eq!(contents, ["Be brief.", "one", "two", "three"]);
+}
+
+#[test]
+fn a_busy_provider_is_asked_again_until_it_answers() {
+    let server = MockServer::start(vec![
+        Reply::json(
+            429,
+            r#"{"error":{"code":"1305","message":"The service may be temporarily overloaded"}}"#,
+        ),
+        Reply::json(503, "upstream is down"),
+        Reply::sse([delta("Hel"), delta("lo"), stop(), done()]),
+    ]);
+    let client = client_with(&provider(&server, "openai-compatible"), &retrying(4));
+    let (seen, outcome) = ask(&client, &request(true));
+
+    assert_eq!(outcome.expect("an answer").text, "Hello");
+    let notes = notices(&seen);
+    assert_eq!(notes.len(), 2);
+    assert_eq!(
+        (notes[0].attempt, notes[0].attempts, notes[0].cause),
+        (2, 5, RetryCause::Http(429))
+    );
+    assert_eq!(
+        (notes[1].attempt, notes[1].attempts, notes[1].cause),
+        (3, 5, RetryCause::Http(503))
+    );
+    // The notices come first, and the text is shown once.
+    assert_eq!(seen[2..], [text("Hel"), text("lo")]);
+
+    let requests = server.requests();
+    assert_eq!(requests.len(), 3);
+    assert!(
+        requests.windows(2).all(|pair| pair[0].body == pair[1].body),
+        "every try sends the same request"
+    );
+    assert!(
+        requests
+            .iter()
+            .all(|sent| sent.header("authorization") == Some(format!("Bearer {KEY}").as_str())),
+        "and carries the key"
+    );
+}
+
+#[test]
+fn anthropic_overload_is_asked_again_too() {
+    let event = |name: &str, value: Value| format!("event: {name}\ndata: {value}\n\n");
+    let server = MockServer::start(vec![
+        Reply::json(
+            529,
+            r#"{"type":"error","error":{"type":"overloaded_error","message":"Overloaded"}}"#,
+        ),
+        Reply::sse([
+            event(
+                "content_block_delta",
+                json!({"type": "content_block_delta", "index": 0, "delta": {"type": "text_delta", "text": "Salut"}}),
+            ),
+            event(
+                "message_delta",
+                json!({"type": "message_delta", "delta": {"stop_reason": "end_turn"}}),
+            ),
+            event("message_stop", json!({"type": "message_stop"})),
+        ]),
+    ]);
+    let client = client_with(&provider(&server, "anthropic"), &retrying(2));
+    let (seen, outcome) = ask(&client, &request(true));
+    assert_eq!(outcome.expect("an answer").text, "Salut");
+    assert_eq!(causes(&seen), [(2, RetryCause::Http(529))]);
+    assert_eq!(server.requests().len(), 2);
+}
+
+#[test]
+fn the_pause_the_provider_asks_for_is_the_pause_taken() {
+    let server = MockServer::start(vec![
+        Reply::json(429, "{}").with_header("retry-after-ms", "250"),
+        whole("ok"),
+    ]);
+    let client = client_with(&provider(&server, "openai-compatible"), &retrying(2));
+    let started = Instant::now();
+    let (seen, outcome) = ask(&client, &request(false));
+
+    assert_eq!(outcome.expect("an answer").text, "ok");
+    assert_eq!(notices(&seen)[0].wait, Duration::from_millis(250));
+    assert!(
+        started.elapsed() >= Duration::from_millis(240),
+        "the client waited: {:?}",
+        started.elapsed()
+    );
+}
+
+#[test]
+fn a_provider_may_ask_for_no_pause_at_all() {
+    let server = MockServer::start(vec![
+        Reply::json(429, "{}").with_header("retry-after", "0"),
+        whole("ok"),
+    ]);
+    // The doubling would wait half a minute, so only the hint explains speed.
+    let slow = NetworkSettings {
+        retry: RetryPolicy {
+            first_delay: Duration::from_secs(30),
+            max_delay: Duration::from_secs(30),
+            budget: Duration::from_secs(120),
+            ..quick(2)
+        },
+        ..network()
+    };
+    let started = Instant::now();
+    let (seen, outcome) = ask(
+        &client_with(&provider(&server, "openai-compatible"), &slow),
+        &request(false),
+    );
+    assert_eq!(outcome.expect("an answer").text, "ok");
+    assert_eq!(notices(&seen)[0].wait, Duration::ZERO);
+    assert!(started.elapsed() < Duration::from_secs(5));
+}
+
+#[test]
+fn a_provider_that_asks_for_a_long_wait_is_not_waited_for() {
+    for hint in ["3600", "Sun, 06 Nov 2095 08:49:37 GMT"] {
+        let server = MockServer::start(vec![
+            Reply::json(429, "{}").with_header("retry-after", hint),
+        ]);
+        let client = client_with(&provider(&server, "openai-compatible"), &retrying(4));
+        let (seen, outcome) = ask(&client, &request(true));
+        assert!(
+            matches!(outcome, Err(ProviderError::Http { status: 429, .. })),
+            "{hint}"
+        );
+        assert_eq!(server.requests().len(), 1, "{hint}");
+        assert!(notices(&seen).is_empty(), "{hint}");
+    }
+}
+
+#[test]
+fn a_spent_quota_is_reported_at_once() {
+    for body in [
+        r#"{"error":{"code":"1308","message":"Usage limit reached for 5 hour. Your limit will reset at 2026-11-20 01:00:00"}}"#,
+        r#"{"error":{"code":"1113","message":"Insufficient balance or no resource package."}}"#,
+        r#"{"error":{"code":"1310","message":"Weekly usage limit reached"}}"#,
+        r#"{"error":{"message":"You exceeded your current quota","type":"insufficient_quota","code":"insufficient_quota"}}"#,
+    ] {
+        let server = MockServer::start(vec![Reply::json(429, body)]);
+        let client = client_with(&provider(&server, "openai-compatible"), &retrying(4));
+        let (seen, outcome) = ask(&client, &request(true));
+        assert!(
+            matches!(outcome, Err(ProviderError::Http { status: 429, .. })),
+            "{body}"
+        );
+        assert_eq!(server.requests().len(), 1, "{body}");
+        assert!(notices(&seen).is_empty(), "{body}");
+    }
+}
+
+#[test]
+fn mistakes_are_not_repeated() {
+    for status in [400, 401, 403, 404, 422] {
+        let server = MockServer::start(vec![Reply::json(status, "{}")]);
+        let client = client_with(&provider(&server, "openai-compatible"), &retrying(4));
+        let (seen, outcome) = ask(&client, &request(true));
+        assert!(
+            matches!(&outcome, Err(ProviderError::Http { status: shown, .. }) if *shown == status),
+            "{status}"
+        );
+        assert_eq!(server.requests().len(), 1, "{status}");
+        assert!(notices(&seen).is_empty(), "{status}");
+    }
+}
+
+#[test]
+fn the_provider_can_forbid_a_retry() {
+    let server = MockServer::start(vec![
+        Reply::json(503, "down").with_header("x-should-retry", "false"),
+    ]);
+    let client = client_with(&provider(&server, "openai-compatible"), &retrying(4));
+    let (seen, outcome) = ask(&client, &request(true));
+    assert!(matches!(
+        outcome,
+        Err(ProviderError::Http { status: 503, .. })
+    ));
+    assert_eq!(server.requests().len(), 1);
+    assert!(seen.is_empty());
+}
+
+#[test]
+fn the_number_of_retries_is_bounded() {
+    let server = MockServer::start(vec![Reply::json(503, "down")]);
+    let client = client_with(&provider(&server, "openai-compatible"), &retrying(2));
+    let (seen, outcome) = ask(&client, &request(true));
+    assert_eq!(
+        outcome.unwrap_err(),
+        ProviderError::Http {
+            status: 503,
+            message: "down".to_owned()
+        }
+    );
+    assert_eq!(server.requests().len(), 3, "the first try and two retries");
+    assert_eq!(
+        causes(&seen),
+        [(2, RetryCause::Http(503)), (3, RetryCause::Http(503))]
+    );
+}
+
+#[test]
+fn the_budget_for_pauses_is_respected() {
+    let server = MockServer::start(vec![Reply::json(503, "down")]);
+    let stingy = NetworkSettings {
+        retry: RetryPolicy {
+            max_retries: 10,
+            first_delay: Duration::from_millis(40),
+            max_delay: Duration::from_millis(40),
+            budget: Duration::from_millis(100),
+        },
+        ..network()
+    };
+    let (seen, outcome) = ask(
+        &client_with(&provider(&server, "openai-compatible"), &stingy),
+        &request(true),
+    );
+    assert!(outcome.is_err());
+    // Pauses of 20 to 40 ms: only a few fit into 100 ms, never all ten.
+    let tries = server.requests().len();
+    assert!((3..=6).contains(&tries), "{tries} tries");
+    assert_eq!(notices(&seen).len(), tries - 1);
+}
+
+#[test]
+fn retrying_can_be_turned_off() {
+    let server = MockServer::start(vec![Reply::json(503, "down")]);
+    let (seen, outcome) = ask(
+        &client(&provider(&server, "openai-compatible")),
+        &request(true),
+    );
+    assert!(outcome.is_err());
+    assert_eq!(server.requests().len(), 1);
+    assert!(seen.is_empty());
+
+    let mut config = Config::new();
+    NetworkSettings::register_defaults(&mut config);
+    config.set(Layer::Env, "network.max_retries", "0");
+    let settings = NetworkSettings::from_config(&config, |_| None).expect("settings");
+    assert_eq!(settings.retry.max_retries, 0);
+    let server = MockServer::start(vec![Reply::json(503, "down")]);
+    let off = NetworkSettings {
+        proxy: ProxySetting::None,
+        ..settings
+    };
+    let (seen, _) = ask(
+        &client_with(&provider(&server, "openai-compatible"), &off),
+        &request(true),
+    );
+    assert_eq!(server.requests().len(), 1);
+    assert!(seen.is_empty());
+}
+
+#[test]
+fn nothing_is_repeated_once_text_has_been_shown() {
+    let server = MockServer::start(vec![
+        Reply::sse_abort([delta("Hel"), delta("lo")]),
+        Reply::sse([delta("never seen"), done()]),
+    ]);
+    let client = client_with(&provider(&server, "openai-compatible"), &retrying(4));
+    let (seen, outcome) = ask(&client, &request(true));
+    assert!(outcome.is_err());
+    assert_eq!(server.requests().len(), 1);
+    assert_eq!(seen, [text("Hel"), text("lo")]);
+}
+
+#[test]
+fn an_error_after_some_text_is_not_a_reason_to_start_over() {
+    let server = MockServer::start(vec![
+        Reply::sse([
+            delta("partial"),
+            data(&json!({"error": {"message": "overloaded", "code": "1305"}})),
+        ]),
+        Reply::sse([delta("never seen"), done()]),
+    ]);
+    let client = client_with(&provider(&server, "openai-compatible"), &retrying(4));
+    let (seen, outcome) = ask(&client, &request(true));
+    assert!(matches!(outcome, Err(ProviderError::Api { .. })));
+    assert_eq!(server.requests().len(), 1);
+    assert_eq!(seen, [text("partial")]);
+}
+
+#[test]
+fn a_stream_that_dies_before_any_text_is_tried_again() {
+    let server = MockServer::start(vec![
+        Reply::sse_abort(std::iter::empty::<String>()),
+        Reply::sse([delta("ok"), stop(), done()]),
+    ]);
+    let client = client_with(&provider(&server, "openai-compatible"), &retrying(2));
+    let (seen, outcome) = ask(&client, &request(true));
+    assert_eq!(outcome.expect("an answer").text, "ok");
+    assert_eq!(causes(&seen), [(2, RetryCause::Network)]);
+    assert_eq!(seen.last(), Some(&text("ok")));
+}
+
+#[test]
+fn a_busy_signal_inside_the_stream_is_tried_again_before_any_text() {
+    let server = MockServer::start(vec![
+        Reply::sse([data(&json!({"error": {
+            "message": "The service may be temporarily overloaded",
+            "code": "1305"
+        }}))]),
+        Reply::sse([delta("ok"), stop(), done()]),
+    ]);
+    let client = client_with(&provider(&server, "openai-compatible"), &retrying(2));
+    let (seen, outcome) = ask(&client, &request(true));
+    assert_eq!(outcome.expect("an answer").text, "ok");
+    assert_eq!(causes(&seen), [(2, RetryCause::Busy)]);
+    assert_eq!(server.requests().len(), 2);
+}
+
+#[test]
+fn an_error_inside_the_stream_that_is_not_about_load_is_final() {
+    let server = MockServer::start(vec![
+        Reply::sse([data(&json!({"error": {
+            "message": "max_tokens is too large",
+            "code": "invalid_request_error"
+        }}))]),
+        Reply::sse([delta("never seen"), done()]),
+    ]);
+    let client = client_with(&provider(&server, "openai-compatible"), &retrying(2));
+    let (seen, outcome) = ask(&client, &request(true));
+    assert!(matches!(outcome, Err(ProviderError::Api { .. })));
+    assert_eq!(server.requests().len(), 1);
+    assert!(seen.is_empty());
+}
+
+#[test]
+fn a_connection_closed_without_an_answer_is_tried_again() {
+    for stream in [true, false] {
+        let server = MockServer::start(vec![
+            Reply::Hangup,
+            if stream {
+                Reply::sse([delta("ok"), stop(), done()])
+            } else {
+                whole("ok")
+            },
+        ]);
+        let client = client_with(&provider(&server, "openai-compatible"), &retrying(2));
+        let (seen, outcome) = ask(&client, &request(stream));
+        assert_eq!(outcome.expect("an answer").text, "ok", "stream: {stream}");
+        assert_eq!(
+            causes(&seen),
+            [(2, RetryCause::Network)],
+            "stream: {stream}"
+        );
+        assert_eq!(server.requests().len(), 2, "stream: {stream}");
+    }
+}
+
+#[test]
+fn a_refused_connection_is_tried_again_and_then_reported() {
+    let port = TcpListener::bind("127.0.0.1:0")
+        .expect("a port")
+        .local_addr()
+        .expect("an address")
+        .port();
+    let provider = provider_at(
+        &format!("http://127.0.0.1:{port}"),
+        "openai-compatible",
+        &[],
+    );
+    let (seen, outcome) = ask(&client_with(&provider, &retrying(2)), &request(true));
+    assert!(matches!(outcome, Err(ProviderError::Transport { .. })));
+    assert_eq!(
+        causes(&seen),
+        [(2, RetryCause::Network), (3, RetryCause::Network)]
+    );
+}
+
+#[test]
+fn a_silent_provider_is_not_asked_again() {
+    let server = MockServer::start(vec![Reply::Stall(Duration::from_secs(4))]);
+    let patient = NetworkSettings {
+        idle_timeout: Duration::from_millis(300),
+        ..retrying(4)
+    };
+    let started = Instant::now();
+    let (seen, outcome) = ask(
+        &client_with(&provider(&server, "openai-compatible"), &patient),
+        &request(true),
+    );
+    assert_eq!(outcome.unwrap_err(), ProviderError::Timeout);
+    assert_eq!(server.requests().len(), 1);
+    assert!(seen.is_empty());
+    assert!(started.elapsed() < Duration::from_millis(3500));
+}
+
+#[test]
+fn the_sink_can_end_the_wait_before_a_retry() {
+    let server = MockServer::start(vec![Reply::json(503, "down")]);
+    let slow = NetworkSettings {
+        retry: RetryPolicy {
+            first_delay: Duration::from_secs(30),
+            max_delay: Duration::from_secs(30),
+            budget: Duration::from_secs(120),
+            ..quick(4)
+        },
+        ..network()
+    };
+    let client = client_with(&provider(&server, "openai-compatible"), &slow);
+    let started = Instant::now();
+    let mut told = Vec::new();
+    let outcome = block_on(client.chat(&request(true), &mut |event: StreamEvent| {
+        let stop = matches!(event, StreamEvent::Retrying(_));
+        told.push(event);
+        if stop {
+            ControlFlow::Break(())
+        } else {
+            ControlFlow::Continue(())
+        }
+    }))
+    .expect("an outcome");
+    assert_eq!(outcome.finish, FinishReason::Interrupted);
+    assert!(outcome.text.is_empty());
+    assert_eq!(told.len(), 1);
+    assert_eq!(server.requests().len(), 1);
+    assert!(
+        started.elapsed() < Duration::from_secs(5),
+        "the wait was cut short"
+    );
+}
+
+#[test]
+fn an_error_that_follows_retries_still_hides_the_key() {
+    let server = MockServer::start(vec![Reply::json(
+        503,
+        &format!(r#"{{"error":{{"message":"backend refused key {KEY}"}}}}"#),
+    )]);
+    let client = client_with(&provider(&server, "openai-compatible"), &retrying(1));
+    let (_, outcome) = ask(&client, &request(true));
+    let shown = outcome.unwrap_err().to_string();
+    assert!(!shown.contains(KEY), "{shown}");
+    assert!(shown.contains("backend refused key"), "{shown}");
 }
