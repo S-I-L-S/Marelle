@@ -1,6 +1,6 @@
 # 0003 The extension plane: MCP first, then WASM and Lua
 
-Status: Proposed
+Status: Accepted for MCP stdio; later planes remain proposed
 Date: 2026-11-23
 
 ## Context
@@ -42,7 +42,8 @@ Rules for all three:
 - Every call has a timeout and an output size limit.
 - Tool names are namespaced by their source (`mcp.<server>.<tool>`,
   `wasm.<plugin>.<tool>`) so a policy can name them without surprises.
-- Examples live in `ext/` in several languages, and are tested in CI.
+- Examples live in `ext/` in several languages. Each example needs a lifecycle
+  check in CI before its runtime is described as verified.
 
 ## Consequences
 
@@ -53,6 +54,11 @@ Rules for all three:
   good test for its design.
 - Prompt injection through tool results becomes the central security topic of
   the plane. It is handled by the rules above and by the sandbox in M4.
+
+The first implementation supports MCP `2025-11-25` over stdio: initialization,
+tool discovery with pagination, and tool calls. Streamable HTTP, server-to-client
+callbacks, WASM, and Lua remain future work. The concrete permissions and limits
+are documented in [MCP.md](../MCP.md).
 
 ## Alternatives
 

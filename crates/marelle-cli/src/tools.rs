@@ -25,7 +25,7 @@ pub(crate) struct ToolAsk {
     /// The permission setting the question belongs to, such as
     /// `permissions.shell`. "Allow always" answers are remembered per
     /// category for the rest of the session.
-    pub(crate) category: &'static str,
+    pub(crate) category: String,
     /// What the tool wants to do, in the interface language.
     pub(crate) label: String,
     /// The command, path or address it wants to act on.
@@ -132,7 +132,7 @@ fn text_arg<'a>(args: &'a Value, key: &str) -> Result<&'a str, String> {
         .ok_or_else(|| format!("Missing or empty string argument: {key}"))
 }
 
-fn permission(config: &Config, key: &str, default: &str) -> &'static str {
+pub(crate) fn permission(config: &Config, key: &str, default: &str) -> &'static str {
     match config.get(key).unwrap_or(default).trim() {
         "allow" => "allow",
         "deny" => "deny",
@@ -140,9 +140,9 @@ fn permission(config: &Config, key: &str, default: &str) -> &'static str {
     }
 }
 
-fn confirm(
+pub(crate) fn confirm(
     config: &Config,
-    key: &'static str,
+    key: &str,
     label_key: &str,
     detail: String,
     locale: Locale,
@@ -154,7 +154,7 @@ fn confirm(
         // The asker owns the session memory: a category already allowed
         // always comes back answered, without a dialog.
         _ => Ok(approve(&ToolAsk {
-            category: key,
+            category: key.to_owned(),
             label: tr(locale, label_key),
             detail,
         })? != ToolDecision::Deny),
