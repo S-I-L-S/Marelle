@@ -12,6 +12,7 @@ name = "marelle"
 path = "src/main.rs"
 
 [dependencies]
+crossterm = { version = "0.29", default-features = false, features = ["bracketed-paste", "events", "windows"] }
 marelle-config.workspace = true
 marelle-core.workspace = true
 marelle-i18n.workspace = true
@@ -19,6 +20,8 @@ marelle-providers.workspace = true
 reqwest.workspace = true
 serde_json.workspace = true
 tokio.workspace = true
+unicode-segmentation.workspace = true
+unicode-width.workspace = true
 
 [dev-dependencies]
 marelle-testkit.workspace = true

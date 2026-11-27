@@ -4,6 +4,19 @@ All notable changes are listed here, newest first. The project follows [Semantic
 
 ## Unreleased
 
+### Added
+
+- Model discovery: the model selector asks the active provider's model catalogue (`/models` on the configured base URL; Anthropic gets `/v1/models`) and merges what it finds with the configured aliases. Providers without the endpoint keep working with manual names; the lookup is best-effort with an eight-second timeout and its failures are announced in the transcript.
+- The README now speaks 51 languages besides English: all of Eurasia, from Portugal to Japan, plus the wider world. Every translation keeps the code blocks byte-identical, carries a language switcher at the top, and no emoji anywhere.
+- Update check: when an interactive session starts, Marelle asks GitHub and GitLab for a newer version and mentions it once in the conversation, with the release page. Releases are asked for first, then tags; every failure stays silent. Sources and the timeout are settings: `update.check`, `update.github_repo`, `update.gitlab_repo`, `update.timeout_secs`.
+- Tool permission answers speak the interface language, and the confirmation offers "Allow always": the category is granted for the rest of the session, without ever lifting a `deny` policy. In the full-screen interface every tool call and its result join the transcript; the line session keeps them on stderr, and the terminal prompt answers `y` once, `a` always.
+
+- Cancelling an answer: in the full-screen interface Ctrl-C stops the request in flight and keeps the session open; it quits only when no answer is running. A question that no tool had acted on goes back into the input to be edited; if tools had already run, their work stays in the conversation and a note closes the turn. What is typed while the model answers is kept instead of lost. A tool that has already started is not interrupted: the cancel takes effect when it finishes. The line-oriented fallback still ends the session on Ctrl-C.
+
+### Changed
+
+- The name a person sees is always `Marelle`: the version line and the error prefixes now use the capital, like the banner and the help do. Command forms such as `marelle chat` stay lowercase.
+
 ### Fixed
 
 - Windows: the user-wide settings file is looked for in `%APPDATA%\marelle\config.toml`, after `XDG_CONFIG_HOME` and before `~/.config`, and a `~` in a settings path falls back to `USERPROFILE` when `HOME` is not set. Before, a Windows session without `HOME` had no user-wide settings file at all. `~\` is accepted there as well as `~/`.

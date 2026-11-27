@@ -1,0 +1,1136 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright (C) 2026 Marelle contributors
+
+//! Marelle's terminal interface.
+//!
+//! This module owns the interface: message layout, input editing, history,
+//! scrolling, command completion and rendering. Crossterm is used only as a
+//! terminal driver for raw mode, keyboard events and screen control.
+
+use std::collections::VecDeque;
+use std::io::{self, IsTerminal, Stdout, Write, stdout};
+
+use crossterm::cursor::{Hide, MoveTo, Show};
+use crossterm::event::{
+    self, DisableBracketedPaste, DisableMouseCapture, EnableBracketedPaste, EnableMouseCapture,
+    Event, KeyCode, KeyEvent, KeyEventKind, KeyModifiers, MouseButton, MouseEventKind,
+};
+use crossterm::execute;
+use crossterm::queue;
+use crossterm::style::Print;
+use crossterm::terminal::{self, Clear, ClearType, EnterAlternateScreen, LeaveAlternateScreen};
+
+use marelle_core::{Message, Role};
+use marelle_i18n::{Locale, tr, tr_with};
+
+use crate::VERSION;
+use crate::text::{Layout, chars_within, fit, next_boundary, previous_boundary, width as cells};
+use crate::theme::{Role as ThemeRole, Theme};
+
+const MAX_INPUT_CHARS: usize = 32 * 1024;
+const MAX_HISTORY: usize = 200;
+const MAX_MESSAGES: usize = 600;
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum MessageKind {
+    User,
+    Assistant,
+    Notice,
+}
+
+#[derive(Debug, Clone)]
+struct UiMessage {
+    kind: MessageKind,
+    text: String,
+}
+
+#[derive(Debug, PartialEq, Eq)]
+pub(crate) enum InputAction {
+    Continue,
+    Submit(String),
+    OpenPalette,
+    Exit,
+}
+
+#[derive(Debug, Clone)]
+pub(crate) struct SelectorItem {
+    pub(crate) value: String,
+    pub(crate) label: String,
+    pub(crate) detail: String,
+}
+
+/// Owns terminal mode and all visible UI state.
+pub(crate) struct Tui {
+    output: Stdout,
+    theme: Theme,
+    color: bool,
+    locale: Locale,
+    session_name: String,
+    provider: String,
+    model: String,
+    status: String,
+    input: String,
+    cursor: usize,
+    history: VecDeque<String>,
+    history_index: Option<usize>,
+    history_draft: String,
+    messages: Vec<UiMessage>,
+    scroll: usize,
+    /// Asked between events for news that arrives on its own time, such as
+    /// the startup update check. Returning text turns it into a notice.
+    update_poll: Option<Box<dyn FnMut() -> Option<String>>>,
+    /// Events that arrived while a model was answering. [`listen_for_cancel`]
+    /// sets them aside, and they are handled before the terminal is read
+    /// again, so that typing ahead is not lost.
+    queued: VecDeque<Event>,
+}
+
+impl Tui {
+    /// Enters the alternate screen. Dropping the value always restores the
+    /// terminal, including when a request or an input read fails.
+    pub(crate) fn enter(
+        theme: Theme,
+        provider: String,
+        model: String,
+        color: bool,
+        locale: Locale,
+    ) -> io::Result<Self> {
+        // Crossterm falls back to /dev/tty when standard input is not a
+        // terminal, which would take over the screen of whoever started a
+        // pipeline or a test. Refuse unless both ends really are terminals.
+        if !io::stdin().is_terminal() || !stdout().is_terminal() {
+            return Err(io::Error::new(
+                io::ErrorKind::Unsupported,
+                "standard input and output are not both terminals",
+            ));
+        }
+        terminal::enable_raw_mode()?;
+        let mut output = stdout();
+        if let Err(error) = execute!(
+            output,
+            EnterAlternateScreen,
+            EnableBracketedPaste,
+            EnableMouseCapture,
+            Hide,
+            Clear(ClearType::All)
+        ) {
+            let _ = terminal::disable_raw_mode();
+            return Err(error);
+        }
+
+        let mut tui = Self {
+            output,
+            theme,
+            color,
+            locale,
+            session_name: "Chat 1".to_owned(),
+            provider,
+            model,
+            status: tr(locale, "tui.ready"),
+            input: String::new(),
+            cursor: 0,
+            history: VecDeque::new(),
+            history_index: None,
+            history_draft: String::new(),
+            messages: Vec::new(),
+            scroll: 0,
+            update_poll: None,
+            queued: VecDeque::new(),
+        };
+        tui.render()?;
+        Ok(tui)
+    }
+
+    pub(crate) fn set_model(&mut self, provider: String, model: String) -> io::Result<()> {
+        self.provider = provider;
+        self.model = model;
+        self.render()
+    }
+
+    pub(crate) fn set_session(&mut self, name: String) -> io::Result<()> {
+        self.session_name = name;
+        self.render()
+    }
+
+    /// Installs the poll that turns news arriving on its own time, such as
+    /// the startup update check, into transcript notices.
+    pub(crate) fn set_update_poll(&mut self, poll: Box<dyn FnMut() -> Option<String>>) {
+        self.update_poll = Some(poll);
+    }
+
+    pub(crate) fn set_status(&mut self, status: impl Into<String>) -> io::Result<()> {
+        self.status = status.into().trim().to_owned();
+        self.render()
+    }
+
+    pub(crate) fn set_input(&mut self, input: String) -> io::Result<()> {
+        self.input = input.chars().take(MAX_INPUT_CHARS).collect();
+        self.cursor = self.input.chars().count();
+        self.reset_history_navigation();
+        self.render()
+    }
+
+    /// Displays a keyboard-navigable selector and returns the chosen value.
+    pub(crate) fn select(
+        &mut self,
+        title: &str,
+        items: &[SelectorItem],
+    ) -> io::Result<Option<String>> {
+        if items.is_empty() {
+            return Ok(None);
+        }
+        let mut selected = 0usize;
+        loop {
+            self.render_selector(title, items, selected)?;
+            match event::read()? {
+                Event::Resize(_, _) => {}
+                Event::Mouse(mouse) => match mouse.kind {
+                    MouseEventKind::ScrollUp => selected = selected.saturating_sub(1),
+                    MouseEventKind::ScrollDown => {
+                        selected = (selected + 1).min(items.len() - 1);
+                    }
+                    MouseEventKind::Down(MouseButton::Left) => {
+                        let (_, height) = terminal::size().unwrap_or((80, 24));
+                        let visible = usize::from(height).saturating_sub(7).max(1);
+                        if let Some(index) = selector_index_at_row(
+                            usize::from(mouse.row),
+                            selected,
+                            items.len(),
+                            visible,
+                        ) {
+                            selected = index;
+                        }
+                    }
+                    _ => {}
+                },
+                Event::Key(key)
+                    if matches!(key.kind, KeyEventKind::Press | KeyEventKind::Repeat) =>
+                {
+                    match key.code {
+                        KeyCode::Esc => {
+                            self.render()?;
+                            return Ok(None);
+                        }
+                        KeyCode::Char('c') if key.modifiers.contains(KeyModifiers::CONTROL) => {
+                            self.render()?;
+                            return Ok(None);
+                        }
+                        KeyCode::Enter => {
+                            let value = items[selected].value.clone();
+                            self.render()?;
+                            return Ok(Some(value));
+                        }
+                        KeyCode::Up | KeyCode::Char('k') => {
+                            selected = selected.saturating_sub(1);
+                        }
+                        KeyCode::Down | KeyCode::Char('j') => {
+                            selected = (selected + 1).min(items.len() - 1);
+                        }
+                        KeyCode::Home => selected = 0,
+                        KeyCode::End => selected = items.len() - 1,
+                        KeyCode::PageUp => {
+                            let (_, height) = terminal::size().unwrap_or((80, 24));
+                            selected = selected
+                                .saturating_sub(usize::from(height).saturating_sub(8).max(1));
+                        }
+                        KeyCode::PageDown => {
+                            let (_, height) = terminal::size().unwrap_or((80, 24));
+                            selected = (selected + usize::from(height).saturating_sub(8).max(1))
+                                .min(items.len() - 1);
+                        }
+                        _ => {}
+                    }
+                }
+                _ => {}
+            }
+        }
+    }
+
+    fn render_selector(
+        &mut self,
+        title: &str,
+        items: &[SelectorItem],
+        selected: usize,
+    ) -> io::Result<()> {
+        let (columns, rows) = terminal::size().unwrap_or((80, 24));
+        let width = usize::from(columns.max(1));
+        let height = usize::from(rows.max(1));
+        let visible = height.saturating_sub(7).max(1);
+        let scroll = selected.saturating_sub(visible.saturating_sub(1));
+        queue!(self.output, Hide, MoveTo(0, 0), Clear(ClearType::All))?;
+        self.draw_line(0, &format!("╭─ {title}"), ThemeRole::Banner, width)?;
+        let keys = format!("│ {}", tr(self.locale, "tui.select.keys"));
+        self.draw_line(1, &keys, ThemeRole::Dim, width)?;
+        self.draw_line(
+            2,
+            &format!("├{}┤", "─".repeat(width.saturating_sub(2))),
+            ThemeRole::Border,
+            width,
+        )?;
+
+        for row in 0..visible {
+            let index = scroll + row;
+            let Some(item) = items.get(index) else {
+                break;
+            };
+            let marker = if index == selected { "›" } else { " " };
+            let detail = if item.detail.is_empty() {
+                String::new()
+            } else {
+                format!("  ·  {}", item.detail)
+            };
+            self.draw_line(
+                3 + row,
+                &format!(" {marker} {}{detail}", item.label),
+                if index == selected {
+                    ThemeRole::Primary
+                } else {
+                    ThemeRole::Text
+                },
+                width,
+            )?;
+        }
+
+        let footer = tr_with(
+            self.locale,
+            "tui.select.footer",
+            &[("count", &items.len().to_string())],
+        );
+        self.draw_line(height.saturating_sub(2), &footer, ThemeRole::Dim, width)?;
+        self.output.flush()
+    }
+
+    pub(crate) fn clear_messages(&mut self) -> io::Result<()> {
+        self.messages.clear();
+        self.scroll = 0;
+        self.render()
+    }
+
+    pub(crate) fn load_history(&mut self, messages: &[Message]) -> io::Result<()> {
+        self.messages.clear();
+        let start = messages.len().saturating_sub(MAX_MESSAGES);
+        self.messages
+            .extend(messages[start..].iter().map(|message| UiMessage {
+                kind: match message.role {
+                    Role::User => MessageKind::User,
+                    Role::Assistant => MessageKind::Assistant,
+                    Role::System | Role::Tool => MessageKind::Notice,
+                },
+                text: message.content.clone(),
+            }));
+        self.scroll = 0;
+        self.render()
+    }
+
+    pub(crate) fn push_user(&mut self, text: String) -> io::Result<()> {
+        self.push_message(MessageKind::User, text);
+        self.scroll = 0;
+        self.render()
+    }
+
+    pub(crate) fn push_notice(&mut self, text: String) -> io::Result<()> {
+        if !text.trim().is_empty() {
+            self.push_message(MessageKind::Notice, text);
+            self.scroll = 0;
+            self.render()?;
+        }
+        Ok(())
+    }
+
+    pub(crate) fn start_answer(&mut self) -> io::Result<()> {
+        self.push_message(MessageKind::Assistant, String::new());
+        self.scroll = 0;
+        self.status = tr(self.locale, "tui.generating");
+        self.render()
+    }
+
+    pub(crate) fn append_answer(&mut self, bytes: &[u8]) -> io::Result<()> {
+        let text = String::from_utf8_lossy(bytes);
+        if self
+            .messages
+            .last()
+            .is_some_and(|message| message.kind == MessageKind::Assistant)
+        {
+            if let Some(last) = self.messages.last_mut() {
+                last.text.push_str(&text);
+            }
+        } else {
+            self.push_message(MessageKind::Assistant, text.into_owned());
+        }
+        self.scroll = 0;
+        self.render()
+    }
+
+    pub(crate) fn finish_answer(&mut self) -> io::Result<()> {
+        if self.messages.last().is_some_and(|message| {
+            message.kind == MessageKind::Assistant && message.text.is_empty()
+        }) {
+            self.messages.pop();
+        }
+        self.render()
+    }
+
+    fn push_message(&mut self, kind: MessageKind, text: String) {
+        self.messages.push(UiMessage { kind, text });
+        if self.messages.len() > MAX_MESSAGES {
+            let excess = self.messages.len() - MAX_MESSAGES;
+            self.messages.drain(0..excess);
+        }
+    }
+
+    /// Reads and handles one terminal event.
+    ///
+    /// Between events the update poll is heard, so a notice may join the
+    /// conversation even while nobody types. The event wait is bounded, which
+    /// is what gives the poll its turn.
+    pub(crate) fn next_action(&mut self) -> io::Result<InputAction> {
+        if let Some(poll) = &mut self.update_poll {
+            if let Some(text) = poll() {
+                self.push_notice(text)?;
+            }
+        }
+        if let Some(event) = self.queued.pop_front() {
+            return self.handle_event(event);
+        }
+        if !event::poll(std::time::Duration::from_millis(250))? {
+            return Ok(InputAction::Continue);
+        }
+        let event = event::read()?;
+        self.handle_event(event)
+    }
+
+    /// Hands back the events that were set aside while a model was answering.
+    pub(crate) fn requeue(&mut self, events: VecDeque<Event>) {
+        self.queued.extend(events);
+    }
+
+    fn handle_event(&mut self, event: Event) -> io::Result<InputAction> {
+        match event {
+            Event::Key(key) => self.handle_key(key),
+            Event::Paste(text) => {
+                self.insert_text(&text.replace("\r\n", "\n").replace('\r', "\n"));
+                self.render()?;
+                Ok(InputAction::Continue)
+            }
+            Event::Resize(_, _) => {
+                self.render()?;
+                Ok(InputAction::Continue)
+            }
+            _ => Ok(InputAction::Continue),
+        }
+    }
+
+    fn handle_key(&mut self, key: KeyEvent) -> io::Result<InputAction> {
+        if !matches!(key.kind, KeyEventKind::Press | KeyEventKind::Repeat) {
+            return Ok(InputAction::Continue);
+        }
+
+        let control = key.modifiers.contains(KeyModifiers::CONTROL);
+        let shift = key.modifiers.contains(KeyModifiers::SHIFT);
+        let alt = key.modifiers.contains(KeyModifiers::ALT);
+
+        if control && matches!(key.code, KeyCode::Char('c')) {
+            return Ok(InputAction::Exit);
+        }
+        if control && matches!(key.code, KeyCode::Char('d')) && self.input.is_empty() {
+            return Ok(InputAction::Exit);
+        }
+        if control && matches!(key.code, KeyCode::Char('u')) {
+            self.input.clear();
+            self.cursor = 0;
+            self.reset_history_navigation();
+            self.render()?;
+            return Ok(InputAction::Continue);
+        }
+        if control && matches!(key.code, KeyCode::Char('w')) {
+            self.delete_previous_word();
+            self.render()?;
+            return Ok(InputAction::Continue);
+        }
+
+        if control && matches!(key.code, KeyCode::Char('p')) {
+            return Ok(InputAction::OpenPalette);
+        }
+
+        match key.code {
+            KeyCode::Enter if shift => self.insert_text("\n"),
+            KeyCode::Enter => {
+                let line = std::mem::take(&mut self.input);
+                self.cursor = 0;
+                self.reset_history_navigation();
+                if !line.trim().is_empty() {
+                    self.history.push_back(line.clone());
+                    if self.history.len() > MAX_HISTORY {
+                        self.history.pop_front();
+                    }
+                    self.render()?;
+                    return Ok(InputAction::Submit(line));
+                }
+            }
+            KeyCode::Char(character) if !control && !alt => {
+                self.insert_text(&character.to_string());
+            }
+            KeyCode::Backspace => self.backspace(),
+            KeyCode::Delete => self.delete(),
+            KeyCode::Left => self.cursor = previous_boundary(&self.input, self.cursor),
+            KeyCode::Right => self.cursor = next_boundary(&self.input, self.cursor),
+            KeyCode::Home => self.cursor = self.line_start(self.cursor),
+            KeyCode::End => self.cursor = self.line_end(self.cursor),
+            KeyCode::Up => {
+                if self.input.contains('\n') {
+                    self.move_vertical(-1);
+                } else {
+                    self.history_up();
+                }
+            }
+            KeyCode::Down => {
+                if self.input.contains('\n') {
+                    self.move_vertical(1);
+                } else {
+                    self.history_down();
+                }
+            }
+            KeyCode::PageUp => {
+                let (_, height) = terminal::size().unwrap_or((80, 24));
+                self.scroll = self
+                    .scroll
+                    .saturating_add(usize::from(height).saturating_sub(7).max(1));
+            }
+            KeyCode::PageDown => {
+                let (_, height) = terminal::size().unwrap_or((80, 24));
+                self.scroll = self
+                    .scroll
+                    .saturating_sub(usize::from(height).saturating_sub(7).max(1));
+            }
+            KeyCode::Tab => self.complete_command(),
+            KeyCode::Esc if !self.input.is_empty() => {
+                self.input.clear();
+                self.cursor = 0;
+                self.reset_history_navigation();
+            }
+            _ => {}
+        }
+
+        self.render()?;
+        Ok(InputAction::Continue)
+    }
+
+    fn insert_text(&mut self, text: &str) {
+        let current = self.input.chars().count();
+        let incoming: String = text
+            .chars()
+            .filter(|character| !character.is_control() || *character == '\n' || *character == '\t')
+            .take(MAX_INPUT_CHARS.saturating_sub(current))
+            .collect();
+        let byte = byte_index(&self.input, self.cursor);
+        self.input.insert_str(byte, &incoming);
+        self.cursor += incoming.chars().count();
+        self.reset_history_navigation();
+    }
+
+    fn backspace(&mut self) {
+        if self.cursor == 0 {
+            return;
+        }
+        let start = byte_index(&self.input, self.cursor - 1);
+        let end = byte_index(&self.input, self.cursor);
+        self.input.replace_range(start..end, "");
+        self.cursor -= 1;
+        self.reset_history_navigation();
+    }
+
+    /// Deletes the whole grapheme cluster after the cursor: a letter goes
+    /// together with its marks.
+    fn delete(&mut self) {
+        let after = next_boundary(&self.input, self.cursor);
+        if after <= self.cursor {
+            return;
+        }
+        let start = byte_index(&self.input, self.cursor);
+        let end = byte_index(&self.input, after);
+        self.input.replace_range(start..end, "");
+        self.reset_history_navigation();
+    }
+
+    fn delete_previous_word(&mut self) {
+        if self.cursor == 0 {
+            return;
+        }
+        let chars: Vec<char> = self.input.chars().collect();
+        let mut start = self.cursor;
+        while start > 0 && chars[start - 1].is_whitespace() {
+            start -= 1;
+        }
+        while start > 0 && !chars[start - 1].is_whitespace() {
+            start -= 1;
+        }
+        let from = byte_index(&self.input, start);
+        let to = byte_index(&self.input, self.cursor);
+        self.input.replace_range(from..to, "");
+        self.cursor = start;
+        self.reset_history_navigation();
+    }
+
+    fn line_start(&self, cursor: usize) -> usize {
+        self.input
+            .chars()
+            .take(cursor)
+            .enumerate()
+            .filter_map(|(index, character)| (character == '\n').then_some(index + 1))
+            .last()
+            .unwrap_or(0)
+    }
+
+    fn line_end(&self, cursor: usize) -> usize {
+        self.input
+            .chars()
+            .skip(cursor)
+            .position(|character| character == '\n')
+            .map_or(self.input.chars().count(), |offset| cursor + offset)
+    }
+
+    fn move_vertical(&mut self, direction: isize) {
+        let chars: Vec<char> = self.input.chars().collect();
+        let mut starts = vec![0usize];
+        for (index, character) in chars.iter().enumerate() {
+            if *character == '\n' {
+                starts.push(index + 1);
+            }
+        }
+        let current_line = starts
+            .iter()
+            .rposition(|start| *start <= self.cursor)
+            .unwrap_or(0);
+        // The column is counted in terminal cells, so moving between a line of
+        // ideographs and a line of Latin letters keeps the cursor under the
+        // same place on the screen.
+        let before: String = chars[starts[current_line]..self.cursor.max(starts[current_line])]
+            .iter()
+            .collect();
+        let column = cells(&before);
+        let target = if direction < 0 {
+            current_line.saturating_sub(1)
+        } else {
+            (current_line + 1).min(starts.len() - 1)
+        };
+        let target_start = starts[target];
+        let target_end = chars[target_start..]
+            .iter()
+            .position(|character| *character == '\n')
+            .map_or(chars.len(), |offset| target_start + offset);
+        let target_line: String = chars[target_start..target_end].iter().collect();
+        self.cursor = target_start + chars_within(&target_line, column);
+    }
+
+    fn history_up(&mut self) {
+        if self.history.is_empty() {
+            return;
+        }
+        let next = match self.history_index {
+            Some(index) => index.saturating_sub(1),
+            None => {
+                self.history_draft = self.input.clone();
+                self.history.len() - 1
+            }
+        };
+        self.history_index = Some(next);
+        self.input.clone_from(&self.history[next]);
+        self.cursor = self.input.chars().count();
+    }
+
+    fn history_down(&mut self) {
+        let Some(index) = self.history_index else {
+            return;
+        };
+        if index + 1 >= self.history.len() {
+            self.history_index = None;
+            self.input.clone_from(&self.history_draft);
+            self.cursor = self.input.chars().count();
+        } else {
+            self.history_index = Some(index + 1);
+            self.input.clone_from(&self.history[index + 1]);
+            self.cursor = self.input.chars().count();
+        }
+    }
+
+    fn reset_history_navigation(&mut self) {
+        self.history_index = None;
+        self.history_draft.clear();
+    }
+
+    fn complete_command(&mut self) {
+        let Some(command) = self.input.strip_prefix('/') else {
+            return;
+        };
+        if command.contains(char::is_whitespace) {
+            return;
+        }
+        const COMMANDS: &[&str] = &[
+            "/clear",
+            "/compare",
+            "/exit",
+            "/fallback",
+            "/help",
+            "/judge",
+            "/model",
+            "/provider",
+            "/quit",
+            "/session",
+            "/system",
+        ];
+        let matches: Vec<&str> = COMMANDS
+            .iter()
+            .copied()
+            .filter(|candidate| candidate[1..].starts_with(command))
+            .collect();
+        if matches.len() == 1 {
+            self.input = format!("{} ", matches[0]);
+            self.cursor = self.input.chars().count();
+        } else if !matches.is_empty() {
+            self.status = matches.join("   ");
+        }
+    }
+
+    fn render(&mut self) -> io::Result<()> {
+        let (columns, rows) = terminal::size().unwrap_or((80, 24));
+        let width = usize::from(columns.max(1));
+        let height = usize::from(rows.max(1));
+        let input_width = width.saturating_sub(4).max(1);
+        let layout = Layout::new(&self.input, input_width);
+        let cursor_spot = layout.spot(self.cursor);
+        let mut input_lines = layout.into_lines();
+        if input_lines.is_empty() {
+            input_lines.push(String::new());
+        }
+        let cursor_line = cursor_spot.0;
+        let max_input_lines = height.saturating_sub(7).clamp(1, 4);
+        let shown_input_lines = input_lines.len().min(max_input_lines);
+        let input_scroll = cursor_line.saturating_sub(shown_input_lines.saturating_sub(1));
+        let input_top = height.saturating_sub(shown_input_lines + 3);
+        let content_height = input_top.saturating_sub(3);
+
+        let mut transcript: Vec<(String, ThemeRole)> = Vec::new();
+        let you = tr(self.locale, "tui.you");
+        let info = tr(self.locale, "tui.info");
+        for message in &self.messages {
+            let (label, label_role, body_role) = match message.kind {
+                MessageKind::User => (you.as_str(), ThemeRole::Primary, ThemeRole::Text),
+                MessageKind::Assistant => ("MARELLE", ThemeRole::Accent, ThemeRole::Text),
+                MessageKind::Notice => (info.as_str(), ThemeRole::Secondary, ThemeRole::Dim),
+            };
+            transcript.push((format!("  {label}"), label_role));
+            for line in wrap(&message.text, input_width) {
+                transcript.push((format!("  {line}"), body_role));
+            }
+            transcript.push((String::new(), ThemeRole::Dim));
+        }
+        if transcript.is_empty() {
+            transcript.push((
+                format!("  {}", tr(self.locale, "tui.empty")),
+                ThemeRole::Dim,
+            ));
+        }
+
+        queue!(self.output, MoveTo(0, 0), Clear(ClearType::All))?;
+        self.draw_line(
+            0,
+            &format!(
+                "╭─ Marelle {VERSION} · {} ── {} / {}",
+                self.session_name, self.provider, self.model
+            ),
+            ThemeRole::Banner,
+            width,
+        )?;
+        self.draw_line(
+            1,
+            &format!("│ {}", self.status),
+            ThemeRole::Secondary,
+            width,
+        )?;
+        self.draw_line(
+            2,
+            &format!("├{}┤", "─".repeat(width.saturating_sub(2))),
+            ThemeRole::Border,
+            width,
+        )?;
+
+        let start = transcript
+            .len()
+            .saturating_sub(content_height.saturating_add(self.scroll));
+        for offset in 0..content_height {
+            let index = start + offset;
+            if let Some((text, role)) = transcript.get(index) {
+                self.draw_line(3 + offset, text, *role, width)?;
+            }
+        }
+
+        // The rule fills what the title leaves, measured in cells so that a
+        // title in any script keeps the line to the width of the screen.
+        let title = format!("╭─ {} ", tr(self.locale, "tui.input"));
+        let rule = "─".repeat(width.saturating_sub(cells(&title) + 2).max(1));
+        self.draw_line(
+            input_top,
+            &format!("{title}{rule} "),
+            ThemeRole::Border,
+            width,
+        )?;
+        for visible in 0..shown_input_lines {
+            let line_index = input_scroll + visible;
+            let content = input_lines.get(line_index).map_or("", String::as_str);
+            let prefix = if line_index == 0 { "❯ " } else { "  " };
+            self.draw_line(
+                input_top + 1 + visible,
+                &format!("{prefix}{content}"),
+                ThemeRole::Prompt,
+                width,
+            )?;
+        }
+        self.draw_line(
+            input_top + 1 + shown_input_lines,
+            &format!("╰{}╯", "─".repeat(width.saturating_sub(2))),
+            ThemeRole::Border,
+            width,
+        )?;
+
+        let hint = command_hint(&self.input);
+        let footer = if hint.is_empty() {
+            tr(self.locale, "tui.footer")
+        } else {
+            format!("{hint}  ·  {}", tr(self.locale, "tui.footer.hinted"))
+        };
+        self.draw_line(
+            input_top + 2 + shown_input_lines,
+            &footer,
+            ThemeRole::Dim,
+            width,
+        )?;
+
+        let (mut cursor_row, mut cursor_column) = cursor_spot;
+        cursor_row = cursor_row.saturating_sub(input_scroll);
+        cursor_row = cursor_row.min(shown_input_lines.saturating_sub(1));
+        cursor_column = cursor_column.min(input_width.saturating_sub(1));
+        let y = input_top + 1 + cursor_row;
+        let x = 2 + cursor_column;
+        queue!(
+            self.output,
+            MoveTo(
+                x.min(u16::MAX as usize) as u16,
+                y.min(u16::MAX as usize) as u16
+            ),
+            Show
+        )?;
+        self.output.flush()
+    }
+
+    fn draw_line(
+        &mut self,
+        row: usize,
+        text: &str,
+        role: ThemeRole,
+        width: usize,
+    ) -> io::Result<()> {
+        let (_, rows) = terminal::size().unwrap_or((80, 24));
+        if row >= usize::from(rows) {
+            return Ok(());
+        }
+        let line = fit(text, width);
+        let styled = self.theme.paint(role, &line, self.color);
+        queue!(
+            self.output,
+            MoveTo(0, row.min(u16::MAX as usize) as u16),
+            Print(styled)
+        )
+    }
+}
+
+impl Drop for Tui {
+    fn drop(&mut self) {
+        let _ = execute!(
+            self.output,
+            DisableBracketedPaste,
+            DisableMouseCapture,
+            Show,
+            LeaveAlternateScreen
+        );
+        let _ = terminal::disable_raw_mode();
+    }
+}
+
+fn selector_index_at_row(
+    row: usize,
+    selected: usize,
+    item_count: usize,
+    visible: usize,
+) -> Option<usize> {
+    if row < 3 || visible == 0 {
+        return None;
+    }
+    let content_row = row - 3;
+    if content_row >= visible {
+        return None;
+    }
+    let scroll = selected.saturating_sub(visible.saturating_sub(1));
+    let index = scroll + content_row;
+    (index < item_count).then_some(index)
+}
+
+fn byte_index(text: &str, character_index: usize) -> usize {
+    text.char_indices()
+        .nth(character_index)
+        .map_or(text.len(), |(byte, _)| byte)
+}
+
+fn wrap(text: &str, columns: usize) -> Vec<String> {
+    Layout::new(text, columns).into_lines()
+}
+
+fn command_hint(input: &str) -> String {
+    let Some(command) = input.strip_prefix('/') else {
+        return String::new();
+    };
+    if command.contains(char::is_whitespace) {
+        return String::new();
+    }
+    [
+        "/clear",
+        "/compare",
+        "/exit",
+        "/fallback",
+        "/help",
+        "/judge",
+        "/model",
+        "/provider",
+        "/quit",
+        "/session",
+        "/skills",
+        "/system",
+        "/tools",
+    ]
+    .into_iter()
+    .filter(|candidate| candidate[1..].starts_with(command))
+    .collect::<Vec<_>>()
+    .join("   ")
+}
+
+/// The most events set aside during one answer. Typing ahead is a few keys, a
+/// paste or a resize, so the bound only matters for a stuck key.
+const MAX_QUEUED_EVENTS: usize = 1024;
+
+/// Whether the event is Ctrl+C, the key that cancels an answer in progress.
+fn is_cancel(event: &Event) -> bool {
+    matches!(
+        event,
+        Event::Key(key)
+            if matches!(key.kind, KeyEventKind::Press | KeyEventKind::Repeat)
+                && key.modifiers.contains(KeyModifiers::CONTROL)
+                && matches!(key.code, KeyCode::Char('c'))
+    )
+}
+
+/// Splits what was typed into the cancel and what must wait. Keys, pastes and
+/// resizes are kept for later; the mouse and the rest are of no use to the
+/// transcript, so they are dropped. Returns whether Ctrl+C was among them.
+fn sift(events: impl IntoIterator<Item = Event>, kept: &mut VecDeque<Event>) -> bool {
+    let mut cancelled = false;
+    for event in events {
+        if is_cancel(&event) {
+            cancelled = true;
+        } else if matches!(event, Event::Key(_) | Event::Paste(_) | Event::Resize(_, _))
+            && kept.len() < MAX_QUEUED_EVENTS
+        {
+            kept.push_back(event);
+        }
+    }
+    cancelled
+}
+
+/// Looks at what the person typed since the last look, without waiting, and
+/// reports whether Ctrl+C was among it. Everything else goes into `kept`; give
+/// it back with [`Tui::requeue`] once the wait is over.
+pub(crate) fn listen_for_cancel(kept: &mut VecDeque<Event>) -> io::Result<bool> {
+    let mut pending = Vec::new();
+    while event::poll(std::time::Duration::ZERO)? {
+        pending.push(event::read()?);
+    }
+    Ok(sift(pending, kept))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn key(code: KeyCode, modifiers: KeyModifiers) -> Event {
+        Event::Key(KeyEvent::new(code, modifiers))
+    }
+
+    #[test]
+    fn only_ctrl_c_cancels() {
+        assert!(is_cancel(&key(KeyCode::Char('c'), KeyModifiers::CONTROL)));
+        assert!(!is_cancel(&key(KeyCode::Char('c'), KeyModifiers::NONE)));
+        assert!(!is_cancel(&key(KeyCode::Char('d'), KeyModifiers::CONTROL)));
+        assert!(!is_cancel(&key(KeyCode::Esc, KeyModifiers::NONE)));
+        assert!(!is_cancel(&Event::Paste("c".to_owned())));
+    }
+
+    #[test]
+    fn releasing_the_key_is_not_a_second_cancel() {
+        let mut release = KeyEvent::new(KeyCode::Char('c'), KeyModifiers::CONTROL);
+        release.kind = KeyEventKind::Release;
+        assert!(!is_cancel(&Event::Key(release)));
+    }
+
+    #[test]
+    fn typing_ahead_survives_a_cancel_in_order() {
+        let mut kept = VecDeque::new();
+        let cancelled = sift(
+            [
+                key(KeyCode::Char('h'), KeyModifiers::NONE),
+                key(KeyCode::Char('c'), KeyModifiers::CONTROL),
+                key(KeyCode::Char('i'), KeyModifiers::NONE),
+            ],
+            &mut kept,
+        );
+        assert!(cancelled);
+        assert_eq!(
+            Vec::from(kept),
+            vec![
+                key(KeyCode::Char('h'), KeyModifiers::NONE),
+                key(KeyCode::Char('i'), KeyModifiers::NONE),
+            ]
+        );
+    }
+
+    #[test]
+    fn pastes_and_resizes_are_kept_and_the_mouse_is_not() {
+        let mut kept = VecDeque::new();
+        let cancelled = sift(
+            [
+                Event::Paste("text".to_owned()),
+                Event::Resize(100, 40),
+                Event::Mouse(crossterm::event::MouseEvent {
+                    kind: MouseEventKind::Moved,
+                    column: 1,
+                    row: 1,
+                    modifiers: KeyModifiers::NONE,
+                }),
+            ],
+            &mut kept,
+        );
+        assert!(!cancelled);
+        assert_eq!(
+            Vec::from(kept),
+            vec![Event::Paste("text".to_owned()), Event::Resize(100, 40)]
+        );
+    }
+
+    #[test]
+    fn the_set_aside_queue_is_bounded_but_a_cancel_still_gets_through() {
+        let mut kept = VecDeque::new();
+        let flood = (0..MAX_QUEUED_EVENTS + 50)
+            .map(|_| key(KeyCode::Char('x'), KeyModifiers::NONE))
+            .chain([key(KeyCode::Char('c'), KeyModifiers::CONTROL)]);
+        assert!(sift(flood, &mut kept));
+        assert_eq!(kept.len(), MAX_QUEUED_EVENTS);
+    }
+
+    #[test]
+    fn selector_mouse_rows_map_to_the_visible_items() {
+        assert_eq!(selector_index_at_row(2, 0, 20, 10), None);
+        assert_eq!(selector_index_at_row(3, 0, 20, 10), Some(0));
+        assert_eq!(selector_index_at_row(8, 0, 20, 10), Some(5));
+        assert_eq!(selector_index_at_row(13, 0, 20, 10), None);
+        assert_eq!(selector_index_at_row(3, 12, 20, 10), Some(3));
+        assert_eq!(selector_index_at_row(12, 12, 20, 10), Some(12));
+    }
+
+    #[test]
+    fn editor_byte_offsets_are_unicode_safe() {
+        let text = "a\u{416}\u{1D11E}z";
+        assert_eq!(byte_index(text, 0), 0);
+        assert_eq!(byte_index(text, 1), 1);
+        assert_eq!(byte_index(text, 2), 3);
+        assert_eq!(byte_index(text, 3), 7);
+        assert_eq!(byte_index(text, 4), text.len());
+    }
+
+    #[test]
+    fn fitting_never_exceeds_the_requested_character_width() {
+        assert_eq!(fit("abcdef", 4), "abcd");
+        assert_eq!(fit("xy", 4), "xy  ");
+    }
+
+    #[test]
+    fn terminal_control_sequences_are_never_emitted_from_content() {
+        let rendered = wrap("hello\u{1b}[2J\u{7}world", 80).join("");
+        assert!(!rendered.contains('\u{1b}'));
+        assert!(!rendered.contains('\u{7}'));
+        assert!(rendered.contains('�'));
+    }
+
+    fn editor() -> Tui {
+        Tui {
+            output: stdout(),
+            theme: Theme::default(),
+            color: false,
+            locale: Locale::En,
+            provider: "zai".to_owned(),
+            session_name: "Chat 1".to_owned(),
+            model: "glm-4.7-flash".to_owned(),
+            status: "Ready".to_owned(),
+            input: String::new(),
+            cursor: 0,
+            history: VecDeque::new(),
+            history_index: None,
+            history_draft: String::new(),
+            messages: Vec::new(),
+            scroll: 0,
+            update_poll: None,
+            queued: VecDeque::new(),
+        }
+    }
+
+    #[test]
+    fn editor_mutations_preserve_unicode_boundaries() {
+        let mut tui = editor();
+        tui.insert_text("a\u{416}\u{1D11E}z");
+        tui.cursor = 2;
+        tui.backspace();
+        assert_eq!(tui.input, "a\u{1D11E}z");
+        assert_eq!(tui.cursor, 1);
+
+        tui.delete();
+        assert_eq!(tui.input, "az");
+        assert_eq!(tui.cursor, 1);
+    }
+
+    #[test]
+    fn history_navigation_restores_the_unsubmitted_draft() {
+        let mut tui = editor();
+        tui.history.push_back("first".to_owned());
+        tui.history.push_back("second".to_owned());
+        tui.input = "unfinished".to_owned();
+        tui.cursor = tui.input.chars().count();
+
+        tui.history_up();
+        assert_eq!(tui.input, "second");
+        tui.history_up();
+        assert_eq!(tui.input, "first");
+        tui.history_down();
+        assert_eq!(tui.input, "second");
+        tui.history_down();
+        assert_eq!(tui.input, "unfinished");
+        assert_eq!(tui.history_index, None);
+    }
+
+    #[test]
+    fn command_hints_only_match_a_partial_slash_command() {
+        assert_eq!(command_hint("/mod"), "/model");
+        assert_eq!(command_hint("/prov"), "/provider");
+        assert_eq!(
+            command_hint("/"),
+            "/clear   /compare   /exit   /fallback   /help   /judge   /model   /provider   /quit   /session   /skills   /system   /tools"
+        );
+        assert_eq!(command_hint("hello"), "");
+        assert_eq!(command_hint("/model glm"), "");
+    }
+}

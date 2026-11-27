@@ -83,6 +83,34 @@ pub(crate) fn error_text(error: &Value) -> String {
     }
 }
 
+/// The codes and types that an error body names, such as `1305`,
+/// `rate_limit_error` or `insufficient_quota`. They come from the `error`
+/// object when there is one, and from the body itself otherwise.
+pub(crate) fn error_ids(body: &[u8]) -> Vec<String> {
+    let Ok(value) = serde_json::from_slice::<Value>(body) else {
+        return Vec::new();
+    };
+    let object = match value.get("error") {
+        Some(error @ Value::Object(_)) => error,
+        _ => &value,
+    };
+    let mut ids = Vec::new();
+    for key in ["code", "type"] {
+        match object.get(key) {
+            Some(Value::String(text)) if !text.is_empty() => ids.push(text.clone()),
+            Some(Value::Number(number)) => ids.push(number.to_string()),
+            _ => {}
+        }
+    }
+    // Some gateways answer `{"error": "insufficient_quota"}`.
+    if let Some(Value::String(text)) = value.get("error") {
+        if text.len() <= 64 {
+            ids.push(text.clone());
+        }
+    }
+    ids
+}
+
 /// The start of a text, on one line.
 pub(crate) fn snippet(text: &str) -> String {
     const LIMIT: usize = 300;
@@ -136,6 +164,44 @@ mod tests {
             error_text(&json!({"message": "error 42", "code": "42"})),
             "error 42"
         );
+    }
+
+    #[test]
+    fn error_ids_name_the_kind_of_failure() {
+        let ids = |body: &str| error_ids(body.as_bytes());
+        // Z.ai.
+        assert_eq!(
+            ids(r#"{"error":{"code":"1305","message":"busy"}}"#),
+            ["1305"]
+        );
+        assert_eq!(ids(r#"{"code":1308,"msg":"limit"}"#), ["1308"]);
+        // OpenAI and compatible: the code first, then the type.
+        assert_eq!(
+            ids(
+                r#"{"error":{"message":"m","type":"insufficient_quota","code":"insufficient_quota"}}"#
+            ),
+            ["insufficient_quota", "insufficient_quota"]
+        );
+        // Anthropic: the type of the error, not the `error` marker around it.
+        assert_eq!(
+            ids(r#"{"type":"error","error":{"type":"rate_limit_error","message":"m"}}"#),
+            ["rate_limit_error"]
+        );
+        assert_eq!(
+            ids(r#"{"error":"insufficient_quota"}"#),
+            ["insufficient_quota"]
+        );
+        for nothing in [
+            "",
+            "not json",
+            "[]",
+            r#"{"error":null}"#,
+            r#"{"error":{"message":"x"}}"#,
+        ] {
+            assert!(ids(nothing).is_empty(), "{nothing:?}");
+        }
+        let long = format!(r#"{{"error":"{}"}}"#, "x".repeat(100));
+        assert!(ids(&long).is_empty(), "a sentence is not an identifier");
     }
 
     #[test]

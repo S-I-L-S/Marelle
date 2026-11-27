@@ -264,7 +264,7 @@ pub(crate) fn banner(
         theme.paint(Role::Banner, "╭─", enabled),
         theme.paint_bold(Role::Banner, &title, enabled)
     );
-    let fill = width.saturating_sub(title.chars().count() + 3);
+    let fill = width.saturating_sub(crate::text::width(&title) + 3);
     let _ = writeln!(
         out,
         "{}{}",
@@ -300,7 +300,7 @@ pub(crate) fn panel<L: AsRef<str>>(
     for (label, value) in rows {
         let label = label.as_ref();
         let text = theme.label(label, value, enabled);
-        let visible = label.chars().count() + 1 + value.chars().count();
+        let visible = crate::text::width(label) + 1 + crate::text::width(value);
         let padding = inner.saturating_sub(visible + 1);
         let _ = writeln!(
             out,

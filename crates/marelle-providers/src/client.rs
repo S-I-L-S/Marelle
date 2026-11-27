@@ -21,7 +21,7 @@ use std::error::Error as _;
 use std::fmt;
 use std::net::IpAddr;
 use std::sync::Arc;
-use std::time::Duration;
+use std::time::{Duration, SystemTime};
 
 use marelle_config::{Config, Expected, Layer, SettingError};
 use reqwest::header::{ACCEPT, AUTHORIZATION, CONTENT_TYPE, HeaderMap, HeaderName, HeaderValue};
@@ -30,10 +30,11 @@ use rustls::pki_types::CertificateDer;
 use rustls::pki_types::pem::PemObject;
 use serde_json::Value;
 
-use crate::chat::{ChatOutcome, ChatRequest, Sink};
+use crate::chat::{ChatOutcome, ChatRequest, FinishReason, Sink, StreamEvent, Usage};
 use crate::config::{AuthStyle, ProviderConfig, ProviderKind, expand_home, text_setting};
-use crate::decode::{Decode, error_text, snippet};
+use crate::decode::{Decode, error_ids, error_text, snippet};
 use crate::error::{ProviderError, protocol};
+use crate::retry::{self, Retry, RetryPolicy, Retryable};
 use crate::secret::Secret;
 use crate::sse::SseParser;
 use crate::{anthropic, openai};
@@ -43,12 +44,16 @@ const IDLE_TIMEOUT_KEY: &str = "network.idle_timeout_secs";
 const CA_BUNDLE_KEY: &str = "network.ca_bundle";
 const PROXY_KEY: &str = "network.proxy";
 const INSECURE_HTTP_KEY: &str = "network.allow_insecure_http";
+const MAX_RETRIES_KEY: &str = "network.max_retries";
+const RETRY_WAIT_KEY: &str = "network.max_retry_wait_secs";
 
 const DEFAULT_CONNECT_SECS: u64 = 15;
 const DEFAULT_IDLE_SECS: u64 = 300;
 /// No timeout above a day makes sense, and absurd values could overflow a
 /// clock somewhere.
 const MAX_TIMEOUT_SECS: u64 = 86_400;
+/// Past a few dozen tries a loop is hammering the provider, not retrying.
+const MAX_RETRIES_LIMIT: u64 = 20;
 
 /// How much of an error response is read.
 const ERROR_BODY_LIMIT: usize = 16 * 1024;
@@ -93,6 +98,8 @@ pub struct NetworkSettings {
     pub extra_roots: Vec<Vec<u8>>,
     /// Whether a key may travel over plain HTTP to another machine.
     pub allow_insecure_http: bool,
+    /// How to try again when the provider is busy or unreachable.
+    pub retry: RetryPolicy,
 }
 
 impl Default for NetworkSettings {
@@ -103,6 +110,7 @@ impl Default for NetworkSettings {
             proxy: ProxySetting::System,
             extra_roots: Vec::new(),
             allow_insecure_http: false,
+            retry: RetryPolicy::default(),
         }
     }
 }
@@ -118,6 +126,7 @@ impl fmt::Debug for NetworkSettings {
                 &format_args!("{} certificate(s)", self.extra_roots.len()),
             )
             .field("allow_insecure_http", &self.allow_insecure_http)
+            .field("retry", &self.retry)
             .finish()
     }
 }
@@ -137,6 +146,17 @@ impl NetworkSettings {
         );
         config.set(Layer::Default, PROXY_KEY, "system");
         config.set(Layer::Default, INSECURE_HTTP_KEY, "false");
+        let retry = RetryPolicy::default();
+        config.set(
+            Layer::Default,
+            MAX_RETRIES_KEY,
+            retry.max_retries.to_string(),
+        );
+        config.set(
+            Layer::Default,
+            RETRY_WAIT_KEY,
+            retry.budget.as_secs().to_string(),
+        );
     }
 
     /// Reads the `network.*` settings.
@@ -171,6 +191,22 @@ impl NetworkSettings {
 
         let allow_insecure_http = config.get_bool(INSECURE_HTTP_KEY)?.unwrap_or(false);
 
+        let defaults = RetryPolicy::default();
+        let max_retries = match config
+            .get_u64(MAX_RETRIES_KEY)
+            .map_err(|_| SettingError::new(MAX_RETRIES_KEY, Expected::WholeNumber))?
+        {
+            None => defaults.max_retries,
+            Some(value) => value.min(MAX_RETRIES_LIMIT) as u32,
+        };
+        let budget = match config
+            .get_u64(RETRY_WAIT_KEY)
+            .map_err(|_| SettingError::new(RETRY_WAIT_KEY, Expected::WholeNumber))?
+        {
+            None => defaults.budget,
+            Some(value) => Duration::from_secs(value.min(MAX_TIMEOUT_SECS)),
+        };
+
         let mut extra_roots = Vec::new();
         if let Some(path) = text_setting(config, CA_BUNDLE_KEY) {
             let path = expand_home(&path, &lookup);
@@ -197,6 +233,11 @@ impl NetworkSettings {
             proxy,
             extra_roots,
             allow_insecure_http,
+            retry: RetryPolicy {
+                max_retries,
+                budget,
+                ..defaults
+            },
         })
     }
 }
@@ -281,6 +322,7 @@ pub struct Client {
     http: reqwest::Client,
     provider: ProviderConfig,
     key: Option<Secret>,
+    retry: RetryPolicy,
 }
 
 impl fmt::Debug for Client {
@@ -357,7 +399,39 @@ impl Client {
             http,
             provider: provider.clone(),
             key,
+            retry: network.retry,
         })
+    }
+
+    /// Discovers model ids exposed by this provider's standard models endpoint.
+    ///
+    /// Discovery is deliberately best-effort at the call site: providers may
+    /// disable this endpoint, expose only a partial catalogue, or require a
+    /// separate account entitlement. A failed discovery must not prevent a
+    /// user from selecting a model they already know by name.
+    pub async fn models(&self) -> Result<Vec<String>, ProviderError> {
+        let url = models_endpoint(&self.provider);
+        let response = self
+            .http
+            .get(url)
+            .header(ACCEPT, "application/json")
+            .timeout(Duration::from_secs(8))
+            .send()
+            .await
+            .map_err(transport)?;
+        if !response.status().is_success() {
+            return Err(self.scrubbed(http_error(response).await));
+        }
+        let body = read_whole(response)
+            .await
+            .map_err(|failed| self.scrubbed(failed.error))?;
+        let value: Value = serde_json::from_slice(&body)
+            .map_err(|_| protocol("the model catalogue was not valid JSON"))?;
+        let models = model_ids(&value);
+        if models.is_empty() {
+            return Err(protocol("the provider returned no model ids"));
+        }
+        Ok(models)
     }
 
     /// Sends the request and waits for the whole answer.
@@ -365,14 +439,60 @@ impl Client {
     /// Pieces of the answer are passed to `sink` as they arrive. A sink that
     /// returns [`std::ops::ControlFlow::Break`] ends the request early; the
     /// outcome then reports [`crate::FinishReason::Interrupted`].
+    ///
+    /// A provider that is busy or unreachable is asked again, as far as the
+    /// [`RetryPolicy`] in the network settings allows. The sink hears about
+    /// each retry as a [`StreamEvent::Retrying`] before the pause, and ends
+    /// the wait by breaking. Nothing is repeated once a piece of the answer
+    /// has been delivered, so a retry never shows the same text twice.
     pub async fn chat(
         &self,
         request: &ChatRequest,
         sink: &mut Sink<'_>,
     ) -> Result<ChatOutcome, ProviderError> {
-        self.exchange(request, sink)
-            .await
-            .map_err(|error| self.scrubbed(error))
+        let mut waited = Duration::ZERO;
+        let mut retries = 0u32;
+        loop {
+            let mut delivered = false;
+            let failed = {
+                let mut watch = |event: StreamEvent| {
+                    delivered = true;
+                    sink(event)
+                };
+                match self.exchange(request, &mut watch).await {
+                    Ok(outcome) => return Ok(outcome),
+                    Err(failed) => failed,
+                }
+            };
+            let error = self.scrubbed(failed.error);
+            let Retryable::Yes { hint } = failed.retry else {
+                return Err(error);
+            };
+            if delivered {
+                return Err(error);
+            }
+            let Some(cause) = retry::cause(&error) else {
+                return Err(error);
+            };
+            let next = retries.saturating_add(1);
+            let Some(wait) = self.retry.pause(next, waited, hint, retry::jitter()) else {
+                return Err(error);
+            };
+            let notice = Retry {
+                attempt: next.saturating_add(1),
+                attempts: self.retry.attempts(),
+                wait,
+                cause,
+            };
+            if sink(StreamEvent::Retrying(notice)).is_break() {
+                return Ok(interrupted());
+            }
+            if !wait.is_zero() {
+                tokio::time::sleep(wait).await;
+            }
+            waited += wait;
+            retries = next;
+        }
     }
 
     fn prepare(&self, request: &ChatRequest) -> Result<Prepared, ProviderError> {
@@ -398,11 +518,12 @@ impl Client {
         })
     }
 
+    /// One try: sends the request and reads the answer.
     async fn exchange(
         &self,
         request: &ChatRequest,
         sink: &mut Sink<'_>,
-    ) -> Result<ChatOutcome, ProviderError> {
+    ) -> Result<ChatOutcome, Failed> {
         let Prepared { url, body, decoder } = self.prepare(request)?;
         let accept = if request.stream {
             "text/event-stream"
@@ -417,10 +538,10 @@ impl Client {
             .body(body)
             .send()
             .await
-            .map_err(transport)?;
+            .map_err(Failed::network)?;
 
         if !response.status().is_success() {
-            return Err(http_error(response).await);
+            return Err(http_failure(response).await);
         }
         // Some servers ignore `stream: true` and answer with plain JSON. That
         // is read as a complete answer instead of failing.
@@ -428,7 +549,7 @@ impl Client {
             read_stream(response, decoder, sink).await
         } else {
             let body = read_whole(response).await?;
-            decoder.complete(&body, sink)
+            Ok(decoder.complete(&body, sink)?)
         }
     }
 
@@ -456,6 +577,72 @@ impl Client {
     }
 }
 
+/// Builds a plain client for background jobs that never carry a key, such as
+/// the update check. It shares the TLS roots, the proxy setting and the
+/// connect timeout with the chat client, and adds a whole-request `timeout`
+/// so a slow mirror cannot hold a session hostage.
+pub fn plain_client(
+    network: &NetworkSettings,
+    timeout: Duration,
+) -> Result<reqwest::Client, ProviderError> {
+    let mut builder = reqwest::Client::builder()
+        .tls_backend_preconfigured(tls_config(&network.extra_roots)?)
+        .http1_only()
+        // Same stance as the chat client: a redirect is a host the user
+        // never named, so it is not followed.
+        .redirect(reqwest::redirect::Policy::none())
+        .connect_timeout(network.connect_timeout)
+        .read_timeout(timeout)
+        .timeout(timeout)
+        .user_agent(USER_AGENT);
+    builder = match &network.proxy {
+        ProxySetting::System => builder,
+        ProxySetting::None => builder.no_proxy(),
+        ProxySetting::Url(text) => {
+            let proxy = reqwest::Proxy::all(text.as_str())
+                .map_err(|_| SettingError::new(PROXY_KEY, Expected::Proxy))?;
+            builder.proxy(proxy)
+        }
+    };
+    builder.build().map_err(transport)
+}
+
+/// The conventional model-list endpoint for the provider's wire protocol.
+fn models_endpoint(provider: &ProviderConfig) -> String {
+    let base = provider.base_url.trim_end_matches('/');
+    match provider.kind {
+        crate::config::ProviderKind::OpenAiCompatible => format!("{base}/models"),
+        crate::config::ProviderKind::Anthropic if base.ends_with("/v1") => {
+            format!("{base}/models")
+        }
+        crate::config::ProviderKind::Anthropic => format!("{base}/v1/models"),
+    }
+}
+
+/// Reads common OpenAI-compatible and Anthropic model-list response shapes.
+fn model_ids(value: &Value) -> Vec<String> {
+    let rows = value
+        .as_array()
+        .or_else(|| value.get("data").and_then(Value::as_array))
+        .or_else(|| value.get("models").and_then(Value::as_array));
+    let Some(rows) = rows else {
+        return Vec::new();
+    };
+    let mut ids = std::collections::BTreeSet::new();
+    for row in rows.iter().take(5_000) {
+        let id = row
+            .get("id")
+            .or_else(|| row.get("name"))
+            .and_then(Value::as_str)
+            .map(str::trim)
+            .filter(|id| !id.is_empty());
+        if let Some(id) = id {
+            ids.insert(id.to_owned());
+        }
+    }
+    ids.into_iter().collect()
+}
+
 /// A request ready to send, with the decoder that will read its answer.
 struct Prepared {
     url: String,
@@ -471,13 +658,53 @@ fn is_json(response: &Response) -> bool {
         .is_some_and(|value| value.to_ascii_lowercase().contains("json"))
 }
 
+/// A try that failed, and what that says about trying again.
+struct Failed {
+    error: ProviderError,
+    retry: Retryable,
+}
+
+impl Failed {
+    /// A failure of the connection itself.
+    fn network(error: reqwest::Error) -> Self {
+        let retry = retry::network(&error);
+        Self {
+            error: transport(error),
+            retry,
+        }
+    }
+}
+
+impl From<ProviderError> for Failed {
+    /// Errors found while reading the answer. A provider that says inside its
+    /// answer that it is busy is asked again; everything else is final.
+    fn from(error: ProviderError) -> Self {
+        let retry = match &error {
+            ProviderError::Api { message } => retry::api_message(message),
+            _ => Retryable::No,
+        };
+        Self { error, retry }
+    }
+}
+
+/// The outcome of a request that the caller stopped while it waited to try
+/// again, before any answer had come.
+fn interrupted() -> ChatOutcome {
+    ChatOutcome {
+        text: String::new(),
+        usage: Usage::default(),
+        finish: FinishReason::Interrupted,
+        tool_calls: Vec::new(),
+    }
+}
+
 async fn read_stream(
     mut response: Response,
     mut decoder: Box<dyn Decode>,
     sink: &mut Sink<'_>,
-) -> Result<ChatOutcome, ProviderError> {
+) -> Result<ChatOutcome, Failed> {
     let mut parser = SseParser::new();
-    while let Some(chunk) = response.chunk().await.map_err(transport)? {
+    while let Some(chunk) = response.chunk().await.map_err(Failed::network)? {
         for event in parser.push(&chunk)? {
             if decoder.feed(&event, sink)?.is_break() {
                 return Ok(decoder.interrupted());
@@ -485,7 +712,7 @@ async fn read_stream(
         }
         // Once the provider says it is done there is nothing left to wait for.
         if decoder.done() {
-            return decoder.finish();
+            return Ok(decoder.finish()?);
         }
     }
     for event in parser.finish() {
@@ -493,22 +720,25 @@ async fn read_stream(
             return Ok(decoder.interrupted());
         }
     }
-    decoder.finish()
+    Ok(decoder.finish()?)
 }
 
-async fn read_whole(mut response: Response) -> Result<Vec<u8>, ProviderError> {
+async fn read_whole(mut response: Response) -> Result<Vec<u8>, Failed> {
     let mut body = Vec::new();
-    while let Some(chunk) = response.chunk().await.map_err(transport)? {
+    while let Some(chunk) = response.chunk().await.map_err(Failed::network)? {
         if body.len() + chunk.len() > RESPONSE_LIMIT {
-            return Err(protocol("the response is too large"));
+            return Err(protocol("the response is too large").into());
         }
         body.extend_from_slice(&chunk);
     }
     Ok(body)
 }
 
-async fn http_error(mut response: Response) -> ProviderError {
+/// Reads an error response and judges whether the request is worth sending
+/// again.
+async fn http_failure(mut response: Response) -> Failed {
     let status = response.status();
+    let headers = response.headers().clone();
     let mut body = Vec::new();
     while body.len() < ERROR_BODY_LIMIT {
         match response.chunk().await {
@@ -518,10 +748,22 @@ async fn http_error(mut response: Response) -> ProviderError {
         }
     }
     body.truncate(ERROR_BODY_LIMIT);
-    ProviderError::Http {
-        status: status.as_u16(),
-        message: describe_error_body(&body, status),
+    Failed {
+        retry: retry::status(
+            status.as_u16(),
+            &headers,
+            &error_ids(&body),
+            SystemTime::now(),
+        ),
+        error: ProviderError::Http {
+            status: status.as_u16(),
+            message: describe_error_body(&body, status),
+        },
     }
+}
+
+async fn http_error(response: Response) -> ProviderError {
+    http_failure(response).await.error
 }
 
 /// The useful part of an error response: the provider's message when the
@@ -664,8 +906,18 @@ BAMCA0kAMEYCIQDmxxbLFrVSrxAe2UrVRQso2S+2DK+o/L4IPSGVORhevgIhAPtg
         config.set(Layer::Env, IDLE_TIMEOUT_KEY, "90");
         config.set(Layer::Env, PROXY_KEY, "http://user:pw@proxy.example:3128");
         config.set(Layer::Env, INSECURE_HTTP_KEY, "yes");
+        config.set(Layer::Env, MAX_RETRIES_KEY, "7");
+        config.set(Layer::Env, RETRY_WAIT_KEY, "45");
         let settings = NetworkSettings::from_config(&config, nothing).unwrap();
         assert_eq!(settings.connect_timeout, Duration::from_secs(3));
+        assert_eq!(settings.retry.max_retries, 7);
+        assert_eq!(settings.retry.budget, Duration::from_secs(45));
+        // What the settings do not reach keeps its default.
+        assert_eq!(
+            settings.retry.first_delay,
+            RetryPolicy::default().first_delay
+        );
+        assert_eq!(settings.retry.max_delay, RetryPolicy::default().max_delay);
         assert_eq!(settings.idle_timeout, Duration::from_secs(90));
         assert_eq!(
             settings.proxy,
@@ -679,6 +931,29 @@ BAMCA0kAMEYCIQDmxxbLFrVSrxAe2UrVRQso2S+2DK+o/L4IPSGVORhevgIhAPtg
         config.set(Layer::Flag, PROXY_KEY, "SYSTEM");
         let settings = NetworkSettings::from_config(&config, nothing).unwrap();
         assert_eq!(settings.proxy, ProxySetting::System);
+    }
+
+    #[test]
+    fn retrying_is_on_by_default_and_can_be_switched_off_or_capped() {
+        let defaults = NetworkSettings::from_config(&Config::new(), nothing).unwrap();
+        assert_eq!(defaults.retry, RetryPolicy::default());
+        assert_eq!(defaults.retry.max_retries, 4);
+
+        let mut config = Config::new();
+        config.set(Layer::Env, MAX_RETRIES_KEY, "0");
+        let off = NetworkSettings::from_config(&config, nothing).unwrap();
+        assert_eq!(off.retry, RetryPolicy::none());
+
+        config.set(Layer::Env, MAX_RETRIES_KEY, "18446744073709551615");
+        config.set(Layer::Env, RETRY_WAIT_KEY, "18446744073709551615");
+        let capped = NetworkSettings::from_config(&config, nothing).unwrap();
+        assert_eq!(capped.retry.max_retries, MAX_RETRIES_LIMIT as u32);
+        assert_eq!(capped.retry.budget, Duration::from_secs(MAX_TIMEOUT_SECS));
+
+        // A budget of zero is allowed: nothing is waited for.
+        config.set(Layer::Flag, RETRY_WAIT_KEY, "0");
+        let none = NetworkSettings::from_config(&config, nothing).unwrap();
+        assert_eq!(none.retry.budget, Duration::ZERO);
     }
 
     #[test]
@@ -710,6 +985,10 @@ BAMCA0kAMEYCIQDmxxbLFrVSrxAe2UrVRQso2S+2DK+o/L4IPSGVORhevgIhAPtg
                 Expected::Proxy,
             ),
             (INSECURE_HTTP_KEY, "perhaps", Expected::Bool),
+            (MAX_RETRIES_KEY, "-1", Expected::WholeNumber),
+            (MAX_RETRIES_KEY, "many", Expected::WholeNumber),
+            (RETRY_WAIT_KEY, "a while", Expected::WholeNumber),
+            (RETRY_WAIT_KEY, "1.5", Expected::WholeNumber),
         ] {
             let mut config = Config::new();
             config.set(Layer::Env, key, value);
@@ -955,5 +1234,48 @@ BAMCA0kAMEYCIQDmxxbLFrVSrxAe2UrVRQso2S+2DK+o/L4IPSGVORhevgIhAPtg
         ] {
             assert_eq!(is_local(&Url::parse(url).unwrap()), local, "{url}");
         }
+    }
+
+    #[test]
+    fn model_endpoint_respects_versioned_and_unversioned_bases() {
+        let mut provider = ProviderConfig {
+            name: "test".to_owned(),
+            kind: crate::config::ProviderKind::OpenAiCompatible,
+            base_url: "https://example.test/v1".to_owned(),
+            api_key_env: None,
+            api_key_file: None,
+            auth: AuthStyle::None,
+            max_tokens_field: MaxTokensField::MaxTokens,
+            stream_usage: true,
+            extra_body: serde_json::Map::new(),
+        };
+        assert_eq!(models_endpoint(&provider), "https://example.test/v1/models");
+        provider.base_url = "https://example.test/api/paas/v4".to_owned();
+        assert_eq!(
+            models_endpoint(&provider),
+            "https://example.test/api/paas/v4/models"
+        );
+        provider.kind = crate::config::ProviderKind::Anthropic;
+        provider.base_url = "https://example.test".to_owned();
+        assert_eq!(models_endpoint(&provider), "https://example.test/v1/models");
+    }
+
+    #[test]
+    fn model_catalog_accepts_openai_and_anthropic_shapes_and_deduplicates() {
+        let value = serde_json::json!({
+            "data": [
+                {"id": "zeta"},
+                {"id": "alpha"},
+                {"id": "zeta"},
+                {"display_name": "ignored"},
+                {"id": "  "}
+            ]
+        });
+        assert_eq!(
+            model_ids(&value),
+            vec!["alpha".to_owned(), "zeta".to_owned()]
+        );
+        let anthropic = serde_json::json!({"data": [{"id": "claude-sonnet"}]});
+        assert_eq!(model_ids(&anthropic), vec!["claude-sonnet".to_owned()]);
     }
 }

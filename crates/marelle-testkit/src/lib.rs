@@ -49,6 +49,8 @@ pub enum Reply {
         content_type: String,
         /// The response body.
         body: String,
+        /// Further headers, such as `Retry-After`.
+        headers: Vec<(String, String)>,
     },
     /// A `text/event-stream` response sent in chunks, pausing after each.
     Stream {
@@ -72,6 +74,9 @@ pub enum Reply {
         /// The `Location` header.
         location: String,
     },
+    /// Closes the connection as soon as the request has been read, without
+    /// sending a single byte.
+    Hangup,
 }
 
 impl Reply {
@@ -81,7 +86,22 @@ impl Reply {
             status,
             content_type: "application/json".to_owned(),
             body: body.to_owned(),
+            headers: Vec::new(),
         }
+    }
+
+    /// Adds a header to a [`Reply::Body`], such as `Retry-After: 3`.
+    ///
+    /// # Panics
+    ///
+    /// Panics for any other kind of reply, which has no room for headers.
+    #[must_use]
+    pub fn with_header(mut self, name: &str, value: &str) -> Reply {
+        match &mut self {
+            Reply::Body { headers, .. } => headers.push((name.to_owned(), value.to_owned())),
+            other => panic!("only a body reply takes headers, not {other:?}"),
+        }
+        self
     }
 
     /// An event stream whose chunks arrive back to back.
@@ -188,9 +208,14 @@ fn reason(status: u16) -> &'static str {
         401 => "Unauthorized",
         403 => "Forbidden",
         404 => "Not Found",
+        408 => "Request Timeout",
+        409 => "Conflict",
         429 => "Too Many Requests",
         500 => "Internal Server Error",
+        502 => "Bad Gateway",
         503 => "Service Unavailable",
+        504 => "Gateway Timeout",
+        529 => "Overloaded",
         _ => "Status",
     }
 }
@@ -249,15 +274,22 @@ fn serve(
             status,
             content_type,
             body,
+            headers,
         } => {
             write!(
                 out,
-                "HTTP/1.1 {status} {}\r\nContent-Type: {content_type}\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{body}",
+                "HTTP/1.1 {status} {}\r\nContent-Type: {content_type}\r\nContent-Length: {}\r\nConnection: close\r\n",
                 reason(*status),
                 body.len()
             )?;
+            for (name, value) in headers {
+                write!(out, "{name}: {value}\r\n")?;
+            }
+            write!(out, "\r\n{body}")?;
             out.flush()
         }
+        // Dropping the socket here closes it with nothing sent.
+        Reply::Hangup => Ok(()),
         Reply::Stream { chunks, pause } => {
             write_stream_head(&mut out)?;
             for chunk in chunks {
