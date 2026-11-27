@@ -19,6 +19,7 @@ All notable changes are listed here, newest first. The project follows [Semantic
 
 ### Fixed
 
+- Setting `theme.primary` now recolours the frames, the prompt and the banner as well, and `theme.dim` the reasoning text. Their own built-in values had kept `theme.border`, `theme.prompt`, `theme.banner` and `theme.reasoning` from following. A colour set for one of them still wins.
 - Windows: the user-wide settings file is looked for in `%APPDATA%\marelle\config.toml`, after `XDG_CONFIG_HOME` and before `~/.config`, and a `~` in a settings path falls back to `USERPROFILE` when `HOME` is not set. Before, a Windows session without `HOME` had no user-wide settings file at all. `~\` is accepted there as well as `~/`.
 
 ### Security
