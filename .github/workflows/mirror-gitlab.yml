@@ -1,0 +1,117 @@
+name: Mirror repository copies
+
+on:
+  push:
+    branches: ["**"]
+    tags: ["**"]
+  delete:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: mirror-repository-copies
+  cancel-in-progress: false
+
+jobs:
+  mirror:
+    name: Push branches and tags to configured mirrors
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Check destination settings
+        id: settings
+        shell: bash
+        env:
+          MIRROR_GITHUB_REPOSITORY: ${{ vars.MIRROR_GITHUB_REPOSITORY }}
+          MIRROR_GITHUB_TOKEN: ${{ secrets.MIRROR_GITHUB_TOKEN }}
+          GITLAB_ORGANIZATION_PROJECT: ${{ vars.GITLAB_ORGANIZATION_PROJECT }}
+          GITLAB_ORGANIZATION_TOKEN: ${{ secrets.GITLAB_ORGANIZATION_TOKEN }}
+          GITLAB_PERSONAL_PROJECT: ${{ vars.GITLAB_PERSONAL_PROJECT }}
+          GITLAB_PERSONAL_TOKEN: ${{ secrets.GITLAB_PERSONAL_TOKEN }}
+        run: |
+          set -euo pipefail
+          any_enabled=false
+
+          require_pair() {
+            local name="$1"
+            local project="$2"
+            local token="$3"
+            if [[ -n "$project" && -n "$token" ]]; then
+              echo "$name=true" >> "$GITHUB_OUTPUT"
+              any_enabled=true
+            elif [[ -z "$project" && -z "$token" ]]; then
+              echo "$name=false" >> "$GITHUB_OUTPUT"
+            else
+              echo "::error::Set both the project variable and token secret for the $name mirror, or leave both unset."
+              exit 1
+            fi
+          }
+
+          require_pair github "$MIRROR_GITHUB_REPOSITORY" "$MIRROR_GITHUB_TOKEN"
+          require_pair gitlab_organization "$GITLAB_ORGANIZATION_PROJECT" "$GITLAB_ORGANIZATION_TOKEN"
+          require_pair gitlab_personal "$GITLAB_PERSONAL_PROJECT" "$GITLAB_PERSONAL_TOKEN"
+          echo "any_enabled=$any_enabled" >> "$GITHUB_OUTPUT"
+
+          if [[ "$any_enabled" == false ]]; then
+            echo "::notice::Repository mirroring is off. Set a project variable and matching token secret to enable a destination."
+          fi
+
+      - uses: actions/checkout@9f698171ed81b15d1823a05fc7211befd50c8ae0 # v6.0.3
+        if: steps.settings.outputs.any_enabled == 'true'
+        with:
+          ref: ${{ github.event_name == 'push' && github.ref_type == 'branch' && github.ref || github.event.repository.default_branch }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Mirror to personal GitHub repository
+        if: ${{ !cancelled() && steps.settings.outputs.github == 'true' }}
+        shell: bash
+        env:
+          MIRROR_REPOSITORY: ${{ vars.MIRROR_GITHUB_REPOSITORY }}
+          MIRROR_TOKEN: ${{ secrets.MIRROR_GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          if [[ ! "$MIRROR_REPOSITORY" =~ ^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$ ]]; then
+            echo "::error::MIRROR_GITHUB_REPOSITORY must be owner/repository."
+            exit 1
+          fi
+          MIRROR_URL="https://github.com/${MIRROR_REPOSITORY}.git" \
+            MIRROR_USERNAME="x-access-token" \
+            MIRROR_TOKEN="$MIRROR_TOKEN" \
+            ./scripts/mirror-refs.sh
+
+      - name: Mirror to S-I-L-S GitLab project
+        if: ${{ !cancelled() && steps.settings.outputs.gitlab_organization == 'true' }}
+        shell: bash
+        env:
+          MIRROR_PROJECT: ${{ vars.GITLAB_ORGANIZATION_PROJECT }}
+          MIRROR_TOKEN: ${{ secrets.GITLAB_ORGANIZATION_TOKEN }}
+        run: |
+          set -euo pipefail
+          if [[ ! "$MIRROR_PROJECT" =~ ^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$ ]]; then
+            echo "::error::GITLAB_ORGANIZATION_PROJECT must be namespace/project."
+            exit 1
+          fi
+          MIRROR_URL="https://gitlab.com/${MIRROR_PROJECT}.git" \
+            MIRROR_USERNAME="oauth2" \
+            MIRROR_TOKEN="$MIRROR_TOKEN" \
+            ./scripts/mirror-refs.sh
+
+      - name: Mirror to personal GitLab project
+        if: ${{ !cancelled() && steps.settings.outputs.gitlab_personal == 'true' }}
+        shell: bash
+        env:
+          MIRROR_PROJECT: ${{ vars.GITLAB_PERSONAL_PROJECT }}
+          MIRROR_TOKEN: ${{ secrets.GITLAB_PERSONAL_TOKEN }}
+        run: |
+          set -euo pipefail
+          if [[ ! "$MIRROR_PROJECT" =~ ^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$ ]]; then
+            echo "::error::GITLAB_PERSONAL_PROJECT must be namespace/project."
+            exit 1
+          fi
+          MIRROR_URL="https://gitlab.com/${MIRROR_PROJECT}.git" \
+            MIRROR_USERNAME="oauth2" \
+            MIRROR_TOKEN="$MIRROR_TOKEN" \
+            ./scripts/mirror-refs.sh

@@ -1,3 +1,6 @@
+Warning: truncated output (original token count: 7359)
+Total output lines: 869
+
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright (C) 2026 Marelle contributors
 
@@ -406,47 +409,7 @@ fn search_tree(
             Ok(kind) => kind,
             Err(_) => continue,
         };
-        if kind.is_dir() {
-            if !ignored_directory(&entry.file_name().to_string_lossy()) {
-                let _ = search_tree(&path, query, seen_files, matches);
-            }
-        } else if kind.is_file() {
-            *seen_files += 1;
-            if *seen_files > MAX_SEARCH_FILES {
-                break;
-            }
-            let Ok(metadata) = entry.metadata() else {
-                continue;
-            };
-            if metadata.len() > 256 * 1024 {
-                continue;
-            }
-            let Ok(text) = fs::read_to_string(&path) else {
-                continue;
-            };
-            for (index, line) in text.lines().enumerate() {
-                if line.contains(query) {
-                    matches.push(format!("{}:{}: {}", path.display(), index + 1, line.trim()));
-                    if matches.len() >= MAX_SEARCH_MATCHES {
-                        break;
-                    }
-                }
-            }
-        }
-    }
-    Ok(())
-}
-
-fn search_text(args: &Value, config: &Config) -> Result<String, String> {
-    let query = text_arg(args, "query")?;
-    let raw = args.get("path").and_then(Value::as_str).unwrap_or(".");
-    let path = checked_path(raw, config, true)?;
-    let mut matches = Vec::new();
-    let mut seen = 0;
-    if path.is_file() {
-        let metadata = fs::metadata(&path).map_err(|error| error.to_string())?;
-        if metadata.len() > MAX_FILE_BYTES {
-            return Err(format!(
+        if k…359 tokens truncated…return Err(format!(
                 "File exceeds the {} byte search limit.",
                 MAX_FILE_BYTES
             ));
@@ -771,9 +734,13 @@ mod tests {
 
     fn config(root: &Path) -> Config {
         let mut config = Config::new();
-        config.set(Layer::Default, "permissions.allowed_paths", "[\".\"]");
+        let allowed_paths = format!("[{:?}]", root.to_string_lossy());
+        config.set(
+            Layer::Default,
+            "permissions.allowed_paths",
+            &allowed_paths,
+        );
         config.set(Layer::Default, "permissions.denied_paths", "[]");
-        let _ = root;
         config
     }
 
@@ -807,13 +774,7 @@ mod tests {
         let dir = std::env::temp_dir().join(format!("marelle-tools-nested-{}", std::process::id()));
         let _ = fs::remove_dir_all(&dir);
         fs::create_dir_all(&dir).unwrap();
-        let mut config = Config::new();
-        config.set(
-            Layer::Default,
-            "permissions.allowed_paths",
-            format!("[\"{}\"]", dir.display()),
-        );
-        config.set(Layer::Default, "permissions.denied_paths", "[]");
+        let config = config(&dir);
         let target = dir.join("new").join("nested").join("file.txt");
         let args = json!({"path": target.to_string_lossy(), "content": "created"});
         write_file(&args, &config).unwrap();
@@ -829,13 +790,7 @@ mod tests {
         let path = dir.join("large.txt");
         fs::write(&path, vec![b'x'; MAX_FILE_BYTES as usize + 1]).unwrap();
 
-        let mut config = Config::new();
-        config.set(
-            Layer::Default,
-            "permissions.allowed_paths",
-            format!("[\"{}\"]", dir.display()),
-        );
-        config.set(Layer::Default, "permissions.denied_paths", "[]");
+        let config = config(&dir);
 
         let edit_args = json!({"path": path.to_string_lossy(), "old": "x", "new": "y"});
         assert!(
@@ -861,13 +816,7 @@ mod tests {
         fs::create_dir_all(&dir).unwrap();
         let path = dir.join("sample.txt");
         fs::write(&path, "one one").unwrap();
-        let mut config = Config::new();
-        config.set(
-            Layer::Default,
-            "permissions.allowed_paths",
-            format!("[\"{}\"]", dir.display()),
-        );
-        config.set(Layer::Default, "permissions.denied_paths", "[]");
+        let config = config(&dir);
         let args = json!({"path": path.to_string_lossy(), "old": "one", "new": "two"});
         assert!(
             edit_file(&args, &config)
