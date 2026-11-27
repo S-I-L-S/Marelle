@@ -5,8 +5,8 @@ shape of the project it gets an ADR in [docs/adr](adr/README.md), and this page
 links to it. The eight roadmap steps in [ARCHITECTURE.md](ARCHITECTURE.md) stay
 as they are. This plan adds the tracks that run beside them.
 
-Written on 2026-11-23, against the branch stack that ends at
-`feature/cancel-response`.
+Updated on 2026-11-27, against the branch stack at
+`feature/polyglot-windows-xp`.
 
 ## What Marelle is
 
@@ -81,7 +81,7 @@ The eight steps of the roadmap, as of this plan:
 | 3 Many models | Done. Aliases, parallel compare, fallback chains, judge. |
 | 4 Act | Done on the branch stack, not yet in `main`. Tool loop, built-in tools, permission policy. Tool turns do not stream yet. |
 | 5 Remember | Partly. Named conversations are saved and resumable. SQLite and long-term memory are not there yet. |
-| 6 Extend | Not started. |
+| 6 Extend | Partial on this branch: MCP stdio tools and examples in five languages. Python has a lifecycle check; the other examples still need CI runtime checks. |
 | 7 Reach | Not started. |
 | 8 Languages | Partly. Four interface languages, README in 51. |
 
@@ -118,7 +118,7 @@ law: M8 and M9 run alongside the others.
 | --- | --- |
 | M0 Foundation | The branch stack is in `main`. This plan, the ADRs and the backlog exist. CONTRIBUTING exists. Every repository URL is correct. A live test against Z.ai is recorded. |
 | M1 Everywhere I | Every Tier 1 target builds in CI. Tests pass on Linux (x86_64, aarch64), Windows x86_64 and macOS arm64. `install.sh` and `install.ps1` work. Releases carry checksums for every Tier 1 target. |
-| M2 Extend I | An MCP stdio client. Servers are configured per project and global, with a trust prompt. MCP tools pass through the permission policy. Examples in at least five languages. Tool turns stream. |
+| M2 Extend I | Partial: MCP stdio client with per-project and global settings, start trust, per-tool permission checks, bounded messages, and five language examples. Python has lifecycle coverage; CI checks for the other runtimes, streaming tool turns, and Streamable HTTP remain. |
 | M3 Code intelligence | A repository map for the 30 most used languages. A language-server client that exposes diagnostics, definitions and references as tools. Build and test commands detected for at least 12 ecosystems. |
 | M4 Sandbox | The shell tool runs inside an OS sandbox on Linux, macOS and Windows under a documented policy. A denied action is reported, never silent. |
 | M5 Remember | Sessions in SQLite with full-text search. Long-term memory under the user's control. Context compaction. |

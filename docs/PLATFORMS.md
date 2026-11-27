@@ -4,7 +4,7 @@ What Marelle runs on, what is verified, and what is still missing. This page is
 the source of truth: the README only claims what a green row here supports.
 The policy behind the tiers is [ADR-0002](adr/0002-platform-tiers-and-targets.md).
 
-Last reviewed: 2026-11-23.
+Last reviewed: 2026-11-27.
 
 ## What a tier means
 
@@ -46,6 +46,7 @@ Marelle never promises more than Rust does. A target that is Tier 3 in Rust
 | Haiku x86_64 | `x86_64-unknown-haiku` | 3 | Not verified. Rust Tier 3: needs `-Zbuild-std` |
 | Redox x86_64 | `x86_64-unknown-redox` | 3 | Not verified. Rust Tier 3: needs `-Zbuild-std` |
 | Windows 7 and 8 | `x86_64-win7-windows-msvc` | 3 | Not verified. Rust Tier 3 |
+| Windows XP x86 | `i686-rust9x-windows-msvc` | 3 | Not verified. A minimal Rust9x PE32 5.01 probe links with explicit XP subsystem flags. The full workspace check stops in `ring` because no Windows-target C compiler is configured; Marelle still needs that toolchain, XP SDK/import libraries, and a successful XP VM run. |
 
 The minimum operating system version of each row is the one Rust itself supports
 for that target. A row that needs a different floor says so in its notes.

@@ -216,6 +216,12 @@ pub(crate) const SETTINGS: &[SettingSpec] = &[
         description: "Save local conversations between runs. Stored on this device only.",
     },
     SettingSpec {
+        key: "mcp.timeout_secs",
+        kind: Kind::PositiveInteger,
+        default: Some("120"),
+        description: "Seconds allowed for one MCP request before its server is stopped.",
+    },
+    SettingSpec {
         key: "permissions.shell",
         kind: Kind::OneOf(PERMISSIONS),
         default: Some("ask"),
@@ -495,6 +501,40 @@ const MODEL_FIELDS: &[SettingSpec] = &[
     },
 ];
 
+/// The dynamic MCP server fields and permission settings.
+const MCP_FIELDS: &[SettingSpec] = &[
+    SettingSpec {
+        key: "mcp.servers.<id>.command",
+        kind: Kind::String,
+        default: None,
+        description: "Executable for a local MCP server. It is launched directly, without a shell.",
+    },
+    SettingSpec {
+        key: "mcp.servers.<id>.args",
+        kind: Kind::List,
+        default: None,
+        description: "Arguments passed to the local MCP server executable.",
+    },
+    SettingSpec {
+        key: "mcp.servers.<id>.env",
+        kind: Kind::List,
+        default: None,
+        description: "Names of environment variables explicitly passed to the MCP server.",
+    },
+    SettingSpec {
+        key: "permissions.mcp_servers.<id>",
+        kind: Kind::OneOf(PERMISSIONS),
+        default: Some("ask"),
+        description: "Allow a local MCP server to start: allow, ask or deny.",
+    },
+    SettingSpec {
+        key: "permissions.mcp_tools.<id>.<tool>",
+        kind: Kind::OneOf(PERMISSIONS),
+        default: Some("ask"),
+        description: "Allow one MCP tool to run: allow, ask or deny.",
+    },
+];
+
 /// The theme roles.
 const THEME_ROLES: &[&str] = &[
     "primary",
@@ -525,6 +565,12 @@ pub(crate) fn lookup(key: &str) -> Option<&'static SettingSpec> {
     if let Some(spec) = MODEL_FIELDS
         .iter()
         .find(|spec| matches_pattern(spec.key, key, "models", "<alias>"))
+    {
+        return Some(spec);
+    }
+    if let Some(spec) = MCP_FIELDS
+        .iter()
+        .find(|spec| matches_mcp_pattern(spec.key, key))
     {
         return Some(spec);
     }
@@ -559,6 +605,34 @@ fn matches_pattern(pattern: &str, key: &str, prefix: &str, placeholder: &str) ->
     expected.replacen(placeholder, name, 1) == rest
 }
 
+/// Matches MCP settings whose tool name may itself contain dots.
+fn matches_mcp_pattern(pattern: &str, key: &str) -> bool {
+    match pattern {
+        "mcp.servers.<id>.command" | "mcp.servers.<id>.args" | "mcp.servers.<id>.env" => {
+            let Some(rest) = key.strip_prefix("mcp.servers.") else {
+                return false;
+            };
+            let Some((id, field)) = rest.split_once('.') else {
+                return false;
+            };
+            !id.is_empty() && !id.contains('.') && field == pattern.rsplit('.').next().unwrap_or("")
+        }
+        "permissions.mcp_servers.<id>" => key
+            .strip_prefix("permissions.mcp_servers.")
+            .is_some_and(|id| !id.is_empty() && !id.contains('.')),
+        "permissions.mcp_tools.<id>.<tool>" => {
+            let Some(rest) = key.strip_prefix("permissions.mcp_tools.") else {
+                return false;
+            };
+            let Some((id, tool)) = rest.split_once('.') else {
+                return false;
+            };
+            !id.is_empty() && !id.contains('.') && !tool.is_empty()
+        }
+        _ => false,
+    }
+}
+
 /// Every default that belongs to the schema.
 pub(crate) fn defaults() -> impl Iterator<Item = (&'static str, &'static str)> {
     SETTINGS
@@ -572,6 +646,7 @@ pub(crate) fn rows() -> impl Iterator<Item = &'static SettingSpec> {
         .iter()
         .chain(PROVIDER_FIELDS.iter())
         .chain(MODEL_FIELDS.iter())
+        .chain(MCP_FIELDS.iter())
 }
 
 #[cfg(test)]
@@ -603,8 +678,25 @@ mod tests {
             lookup("theme.primary").map(|spec| spec.kind),
             Some(Kind::HexColor)
         );
+        assert_eq!(
+            lookup("mcp.servers.filesystem.command").map(|spec| spec.kind),
+            Some(Kind::String)
+        );
+        assert_eq!(
+            lookup("permissions.mcp_servers.filesystem").map(|spec| spec.kind),
+            Some(Kind::OneOf(PERMISSIONS))
+        );
+        assert_eq!(
+            lookup("permissions.mcp_tools.filesystem.read_file").map(|spec| spec.kind),
+            Some(Kind::OneOf(PERMISSIONS))
+        );
+        assert_eq!(
+            lookup("permissions.mcp_tools.filesystem.search.text").map(|spec| spec.kind),
+            Some(Kind::OneOf(PERMISSIONS))
+        );
         assert!(lookup("providers.zai.nonsense").is_none());
         assert!(lookup("models..model").is_none());
+        assert!(lookup("permissions.mcp_tools..read").is_none());
     }
 
     #[test]

@@ -358,7 +358,7 @@ struct Conversation {
     /// Tool permission categories answered with "Allow always" this
     /// session; an `ask` for one of them is granted without a dialog. A
     /// `deny` policy is never lifted by it.
-    tool_allowed: Vec<&'static str>,
+    tool_allowed: Vec<String>,
 }
 
 fn effective_provider_name_for(
@@ -982,6 +982,18 @@ fn single_turn(
         return Failure::usage(tr(locale, "chat.no_model")).print(io.err);
     }
 
+    // MCP processes are started only after the person approves their command.
+    // Keep them alive for the whole model/tool loop so a server can retain
+    // state between calls in one turn.
+    let (mut mcp, mcp_errors) = crate::mcp::Runtime::connect_all(&plan.config, locale, |ask| {
+        approve_tool(ask, session_allowed, locale, io, interactive, &mut tui)
+    })?;
+    for error in mcp_errors {
+        writeln!(io.err, "{error}")?;
+    }
+    let mut tool_definitions = crate::tools::definitions();
+    tool_definitions.extend(mcp.definitions().iter().cloned());
+
     for (index, reference) in attempts.iter().enumerate() {
         let last_attempt = index + 1 == attempts.len();
         let target = match resolve_target(
@@ -1053,7 +1065,7 @@ fn single_turn(
                 temperature: target.temperature,
                 stream: false,
                 tools: if tool_rounds < max_turns {
-                    crate::tools::definitions()
+                    tool_definitions.clone()
                 } else {
                     Vec::new()
                 },
@@ -1199,62 +1211,30 @@ fn single_turn(
                                 )
                             )?;
                         }
-                        let mut approve = |ask: &ToolAsk| -> io::Result<ToolDecision> {
-                            if session_allowed.contains(&ask.category) {
-                                return Ok(ToolDecision::AllowOnce);
-                            }
-                            if let Some(ui) = tui.as_deref_mut() {
-                                let items = vec![
-                                    SelectorItem {
-                                        value: "once".to_owned(),
-                                        label: tr(locale, "tool.confirm.allow_once"),
-                                        detail: ask.detail.clone(),
-                                    },
-                                    SelectorItem {
-                                        value: "always".to_owned(),
-                                        label: tr(locale, "tool.confirm.allow_always"),
-                                        detail: tr(locale, "tool.confirm.allow_always.detail"),
-                                    },
-                                    SelectorItem {
-                                        value: "deny".to_owned(),
-                                        label: tr(locale, "tool.confirm.deny"),
-                                        detail: tr(locale, "tool.confirm.deny.detail"),
-                                    },
-                                ];
-                                let title =
-                                    tr_with(locale, "tool.confirm.title", &[("label", &ask.label)]);
-                                match ui.select(&title, &items)?.as_deref() {
-                                    Some("always") => {
-                                        session_allowed.push(ask.category);
-                                        Ok(ToolDecision::AllowAlways)
-                                    }
-                                    Some("once") => Ok(ToolDecision::AllowOnce),
-                                    _ => Ok(ToolDecision::Deny),
-                                }
-                            } else if interactive {
-                                writeln!(
-                                    io.err,
-                                    "{}:\n{}\n{}",
-                                    ask.label,
-                                    ask.detail,
-                                    tr(locale, "tool.confirm.line.keys")
-                                )?;
-                                io.err.flush()?;
-                                let mut answer = String::new();
-                                io.input.read_line(&mut answer)?;
-                                match answer.trim().to_ascii_lowercase().as_str() {
-                                    "a" | "always" | "2" => Ok(ToolDecision::AllowAlways),
-                                    "y" | "yes" | "1" => Ok(ToolDecision::AllowOnce),
-                                    _ => Ok(ToolDecision::Deny),
-                                }
-                            } else {
-                                Ok(ToolDecision::Deny)
-                            }
-                        };
-
-                        let result =
-                            crate::tools::execute(&call, &plan.config, locale, &mut approve)
-                                .unwrap_or_else(|error| format!("Tool error: {error}"));
+                        let result = if call.name.starts_with("mcp.") {
+                            mcp.call(&call, &plan.config, locale, |ask| {
+                                approve_tool(
+                                    ask,
+                                    session_allowed,
+                                    locale,
+                                    io,
+                                    interactive,
+                                    &mut tui,
+                                )
+                            })
+                        } else {
+                            crate::tools::execute(&call, &plan.config, locale, &mut |ask| {
+                                approve_tool(
+                                    ask,
+                                    session_allowed,
+                                    locale,
+                                    io,
+                                    interactive,
+                                    &mut tui,
+                                )
+                            })
+                        }
+                        .unwrap_or_else(|error| format!("Tool error: {error}"));
                         if let Some(ui) = tui.as_deref_mut() {
                             let short = shorten(&result, 240);
                             let _ = ui.push_notice(tr_with(
@@ -2355,6 +2335,70 @@ fn repl_line(
 fn shorten(text: &str, room: usize) -> String {
     let flat = text.split_whitespace().collect::<Vec<_>>().join(" ");
     crate::text::ellipsize(&flat, room)
+}
+
+/// Shows one permission question and remembers "allow always" for this
+/// conversation only.
+fn approve_tool(
+    ask: &ToolAsk,
+    session_allowed: &mut Vec<String>,
+    locale: Locale,
+    io: &mut Io<'_>,
+    interactive: bool,
+    tui: &mut Option<&mut Tui>,
+) -> io::Result<ToolDecision> {
+    if session_allowed.contains(&ask.category) {
+        return Ok(ToolDecision::AllowOnce);
+    }
+    if let Some(ui) = tui.as_deref_mut() {
+        let items = vec![
+            SelectorItem {
+                value: "once".to_owned(),
+                label: tr(locale, "tool.confirm.allow_once"),
+                detail: ask.detail.clone(),
+            },
+            SelectorItem {
+                value: "always".to_owned(),
+                label: tr(locale, "tool.confirm.allow_always"),
+                detail: tr(locale, "tool.confirm.allow_always.detail"),
+            },
+            SelectorItem {
+                value: "deny".to_owned(),
+                label: tr(locale, "tool.confirm.deny"),
+                detail: tr(locale, "tool.confirm.deny.detail"),
+            },
+        ];
+        let title = tr_with(locale, "tool.confirm.title", &[("label", &ask.label)]);
+        match ui.select(&title, &items)?.as_deref() {
+            Some("always") => {
+                session_allowed.push(ask.category.clone());
+                Ok(ToolDecision::AllowAlways)
+            }
+            Some("once") => Ok(ToolDecision::AllowOnce),
+            _ => Ok(ToolDecision::Deny),
+        }
+    } else if interactive {
+        writeln!(
+            io.err,
+            "{}:\n{}\n{}",
+            ask.label,
+            ask.detail,
+            tr(locale, "tool.confirm.line.keys")
+        )?;
+        io.err.flush()?;
+        let mut answer = String::new();
+        io.input.read_line(&mut answer)?;
+        match answer.trim().to_ascii_lowercase().as_str() {
+            "a" | "always" | "2" => {
+                session_allowed.push(ask.category.clone());
+                Ok(ToolDecision::AllowAlways)
+            }
+            "y" | "yes" | "1" => Ok(ToolDecision::AllowOnce),
+            _ => Ok(ToolDecision::Deny),
+        }
+    } else {
+        Ok(ToolDecision::Deny)
+    }
 }
 
 /// Splits `/name rest`. A line that starts with a path, such as

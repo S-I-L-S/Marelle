@@ -10,6 +10,7 @@ mod args;
 mod cancel;
 mod chat;
 mod inspect;
+mod mcp;
 mod messages;
 mod schema;
 mod settings;

@@ -6,6 +6,7 @@ All notable changes are listed here, newest first. The project follows [Semantic
 
 ### Added
 
+- Initial MCP stdio client: configured local servers expose namespaced tools after an explicit start-trust check. Tool calls use per-tool permissions, bounded JSON-RPC messages and results, and a timeout. Added dependency-free word-count server examples in Python, JavaScript, Go, PHP and Ruby; the Python example has the lifecycle check today.
 - Model discovery: the model selector asks the active provider's model catalogue (`/models` on the configured base URL; Anthropic gets `/v1/models`) and merges what it finds with the configured aliases. Providers without the endpoint keep working with manual names; the lookup is best-effort with an eight-second timeout and its failures are announced in the transcript.
 - The README now speaks 51 languages besides English: all of Eurasia, from Portugal to Japan, plus the wider world. Every translation keeps the code blocks byte-identical, carries a language switcher at the top, and no emoji anywhere.
 - Update check: when an interactive session starts, Marelle asks GitHub and GitLab for a newer version and mentions it once in the conversation, with the release page. Releases are asked for first, then tags; every failure stays silent. Sources and the timeout are settings: `update.check`, `update.github_repo`, `update.gitlab_repo`, `update.timeout_secs`.
