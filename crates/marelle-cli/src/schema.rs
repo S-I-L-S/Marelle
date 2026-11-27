@@ -356,25 +356,25 @@ pub(crate) const SETTINGS: &[SettingSpec] = &[
     SettingSpec {
         key: "theme.border",
         kind: Kind::HexColor,
-        default: Some("#B57EDC"),
+        default: None,
         description: "The frame around an answer. Defaults to theme.primary.",
     },
     SettingSpec {
         key: "theme.prompt",
         kind: Kind::HexColor,
-        default: Some("#B57EDC"),
+        default: None,
         description: "The input prompt. Defaults to theme.primary.",
     },
     SettingSpec {
         key: "theme.banner",
         kind: Kind::HexColor,
-        default: Some("#B57EDC"),
+        default: None,
         description: "The banner. Defaults to theme.primary.",
     },
     SettingSpec {
         key: "theme.reasoning",
         kind: Kind::HexColor,
-        default: Some("#8A7F95"),
+        default: None,
         description: "Reasoning text. Defaults to theme.dim.",
     },
     SettingSpec {

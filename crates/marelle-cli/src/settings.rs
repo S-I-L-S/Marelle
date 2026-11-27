@@ -132,6 +132,49 @@ pub(crate) fn redact_url(value: &str) -> String {
 mod tests {
     use super::*;
 
+    /// The colours that follow another colour must still follow it after the
+    /// built-in defaults are in place, as they are in a real session.
+    #[test]
+    fn colours_left_unset_follow_the_one_they_depend_on() {
+        use crate::theme::{Role, Theme, parse_hex};
+
+        let paths = ConfigPaths {
+            global: None,
+            project: PathBuf::from("no-such-directory/config.toml"),
+        };
+        let load = |vars: &[(&str, &str)]| {
+            let vars: Vec<(String, String)> = vars
+                .iter()
+                .map(|(name, value)| (name.to_string(), value.to_string()))
+                .collect();
+            Theme::from_config(&build_config_at(&vars, &[], &paths).unwrap()).unwrap()
+        };
+
+        let wisteria = parse_hex("#B57EDC");
+        let untouched = load(&[]);
+        for role in [Role::Primary, Role::Border, Role::Prompt, Role::Banner] {
+            assert_eq!(untouched.color(role), wisteria, "{role:?}");
+        }
+        assert_eq!(untouched.color(Role::Reasoning), untouched.color(Role::Dim));
+
+        let changed = load(&[
+            ("MARELLE_THEME__PRIMARY", "#FF8800"),
+            ("MARELLE_THEME__DIM", "#445566"),
+        ]);
+        for role in [Role::Primary, Role::Border, Role::Prompt, Role::Banner] {
+            assert_eq!(changed.color(role), parse_hex("#FF8800"), "{role:?}");
+        }
+        assert_eq!(changed.color(Role::Reasoning), parse_hex("#445566"));
+
+        // A colour that is set by name still wins over the one it follows.
+        let named = load(&[
+            ("MARELLE_THEME__PRIMARY", "#FF8800"),
+            ("MARELLE_THEME__BORDER", "#00AA55"),
+        ]);
+        assert_eq!(named.color(Role::Border), parse_hex("#00AA55"));
+        assert_eq!(named.color(Role::Prompt), parse_hex("#FF8800"));
+    }
+
     fn env(list: &[(&str, &str)]) -> Vec<(String, String)> {
         list.iter()
             .map(|(name, value)| ((*name).to_owned(), (*value).to_owned()))
