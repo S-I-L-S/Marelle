@@ -1,28 +1,66 @@
-# GitLab mirror and CI
+# Repository mirrors and GitLab CI
 
-GitHub remains the canonical development repository for now:
+`S-I-L-S/Marelle` on GitHub is the single source of truth. A GitHub Actions
+workflow mirrors its Git branches and tags to three read-only copies:
 
-- Source: https://github.com/S-I-L-S/marelle
-- Active development branch: `feature/native-terminal-ui`
+| Destination | Project |
+| --- | --- |
+| GitHub personal copy | `cornier-en-branche/Marelle` |
+| GitLab organization copy | `s-i-l-s/marelle` |
+| GitLab personal copy | `cornier-en-branche/marelle` |
 
-The repository includes a `.gitlab-ci.yml` pipeline so a GitLab copy can run the same core Rust checks. The pipeline runs formatting, Clippy, the workspace test suite, the Rust 1.85 minimum-supported-version check, and a release build. Android/Termux cross-builds remain covered by GitHub Actions because they require the Android NDK setup already maintained in `.github/workflows/ci.yml`.
+The personal GitLab project has an older scaffold. Its existing history is
+preserved on `archive/pre-mirror-2026-11-27`; the mirror workflow keeps every
+`archive/*` branch and tag while syncing the active branches and tags from the
+canonical repository.
 
-## Create or connect the GitLab project
+The GitLab organization project must be created as an empty project under the
+`s-i-l-s` group before its destination is enabled. Do not initialize it with a
+README, license, or other files. The existing group project `S.I.L-S` is a
+separate project and is not used as the Marelle mirror.
 
-A GitLab project must exist before repository mirroring can be configured. Do not create a second independent development history: use GitHub as the source of truth and configure the GitLab project as a **pull mirror**.
+## Enable the mirrors
 
-1. Create an empty GitLab project named `marelle` under the intended namespace. Do not initialize it with a README, license, or other files.
-2. Open **Settings → Repository → Mirroring repositories**.
-3. Add `https://github.com/S-I-L-S/marelle.git` as the mirror URL.
-4. Select **Pull** as the direction and configure authentication if the GitHub repository is private.
-5. Trigger an update and verify that `main` and `feature/native-terminal-ui` appear.
-6. Open **Build → Pipelines** and confirm the pipeline passes on the mirrored branch.
+In `S-I-L-S/Marelle`, open **Settings → Secrets and variables → Actions** and
+add these repository variables and secrets:
 
-GitLab pull-mirror availability and limits depend on the GitLab offering and project permissions. If pull mirroring is unavailable, use a controlled push from the canonical GitHub repository to GitLab rather than enabling bidirectional mirroring.
+| Name | Type | Value |
+| --- | --- | --- |
+| `MIRROR_GITHUB_REPOSITORY` | Variable | `cornier-en-branche/Marelle` |
+| `MIRROR_GITHUB_TOKEN` | Secret | Fine-grained token with Contents and Workflows read/write access to that personal repository |
+| `GITLAB_ORGANIZATION_PROJECT` | Variable | `s-i-l-s/marelle` |
+| `GITLAB_ORGANIZATION_TOKEN` | Secret | GitLab token with `write_repository` access to the organization project |
+| `GITLAB_PERSONAL_PROJECT` | Variable | `cornier-en-branche/marelle` |
+| `GITLAB_PERSONAL_TOKEN` | Secret | GitLab token with `write_repository` access to the personal project |
+
+Use separate tokens for each destination and limit each token to the named
+project where the service permits it. Never put tokens in repository files or
+URLs. The workflow reads credentials from environment variables and does not
+print them.
+
+The workflow starts after a branch or tag changes, after a ref is deleted, or
+when run manually from the Actions page. It pushes every active branch and tag,
+force-updates changed refs, removes deleted active refs, and preserves any
+`archive/*` ref on a destination. The workflow attempts every configured
+destination in the same run. It does not copy issues, pull requests, merge
+requests, releases, settings, or permissions.
+
+The personal GitHub repository is empty, so the first successful push will
+create its branches. Either service may protect its default branch from force
+pushes; allow the matching mirror token to update that branch before enabling
+the destination.
+
+## GitLab CI
+
+Each GitLab copy can run `.gitlab-ci.yml` on mirrored branches. It checks the
+Rust workspace formatting, Clippy, tests, the Rust 1.85 minimum supported
+version, and a release build. GitHub Actions continues to cover Android and
+Termux cross-builds.
 
 ## Source-of-truth policy
 
-- Develop and review changes on GitHub.
-- Treat GitLab as a read-only mirror unless the project owner explicitly changes this policy.
-- Never develop independently on both remotes; divergence can stop mirroring or overwrite refs.
-- Do not place API keys or access tokens in repository files, CI variables printed to logs, or remote URLs committed to Git.
+- Develop and review changes on the canonical GitHub repository.
+- Treat all personal and GitLab copies as read-only mirrors.
+- Never develop independently on mirror branches; their active refs are
+  force-updated from GitHub.
+- Keep `archive/*` refs for snapshots that predate mirroring.

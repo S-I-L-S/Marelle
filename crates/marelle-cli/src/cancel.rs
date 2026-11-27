@@ -135,12 +135,16 @@ mod tests {
     }
 
     #[test]
-    fn slow_work_outlives_a_check_that_keeps_saying_no() {
-        let asked = Cell::new(0);
-        let work = async {
-            tokio::time::sleep(Duration::from_millis(150)).await;
-            5
-        };
+    fn work_finishes_after_repeated_negative_cancellation_checks() {
+        let asked = Rc::new(Cell::new(0));
+        let work_asked = Rc::clone(&asked);
+        let work = std::future::poll_fn(move |_| {
+            if work_asked.get() >= 2 {
+                Poll::Ready(5)
+            } else {
+                Poll::Pending
+            }
+        });
         let waited = runtime()
             .block_on(until_cancelled(work, || {
                 asked.set(asked.get() + 1);
@@ -148,7 +152,7 @@ mod tests {
             }))
             .expect("no terminal error");
         assert_eq!(waited, Waited::Done(5));
-        assert!(asked.get() >= 2, "the check ran only {} times", asked.get());
+        assert_eq!(asked.get(), 2);
     }
 
     #[test]
